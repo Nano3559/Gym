@@ -1,0 +1,218 @@
+import { useMemo, useState } from 'react'
+import { CheckCircle2, User, Phone, Mail, Home, Cake, CreditCard, HeartPulse } from 'lucide-react'
+import { plans } from '../data/gymData'
+import Modal from './ui/Modal'
+
+const initialForm = {
+  nombre: '',
+  apellido: '',
+  ci: '',
+  nacimiento: '',
+  telefono: '',
+  correo: '',
+  direccion: '',
+  plan: '',
+  emergencia: '',
+}
+
+export default function RegisterModal({ open, onClose, defaultPlan, onSuccess }) {
+  const [form, setForm] = useState(() => ({
+    ...initialForm,
+    plan: defaultPlan || '',
+  }))
+  const [errors, setErrors] = useState({})
+  const [success, setSuccess] = useState(false)
+
+  const planOptions = useMemo(
+    () => plans.map((p) => ({ value: p.id, label: `${p.name} · ${p.currency} ${p.price}/mes` })),
+    []
+  )
+
+  const reset = () => {
+    setForm(initialForm)
+    setErrors({})
+    setSuccess(false)
+  }
+
+  const handleClose = () => {
+    onClose()
+    setTimeout(reset, 250)
+  }
+
+  const validate = () => {
+    const errs = {}
+    if (!form.nombre.trim()) errs.nombre = 'El nombre es obligatorio'
+    if (!form.apellido.trim()) errs.apellido = 'El apellido es obligatorio'
+    if (!form.ci.trim()) errs.ci = 'El CI es obligatorio'
+    else if (!/^\d{5,10}$/.test(form.ci.trim()))
+      errs.ci = 'Ingresa un CI válido (5 a 10 dígitos)'
+    if (!form.nacimiento) errs.nacimiento = 'Selecciona tu fecha de nacimiento'
+    if (!form.telefono.trim()) errs.telefono = 'El teléfono es obligatorio'
+    else if (!/^\+?\d{7,12}$/.test(form.telefono.trim()))
+      errs.telefono = 'Ingresa un teléfono válido'
+    if (!form.correo.trim()) errs.correo = 'El correo es obligatorio'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim()))
+      errs.correo = 'Ingresa un correo válido'
+    if (!form.direccion.trim()) errs.direccion = 'La dirección es obligatoria'
+    if (!form.plan) errs.plan = 'Selecciona un plan'
+    if (!form.emergencia.trim()) errs.emergencia = 'El contacto de emergencia es obligatorio'
+    return errs
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const errs = validate()
+    setErrors(errs)
+    if (Object.keys(errs).length > 0) return
+    setSuccess(true)
+    onSuccess({ ...form, plan: plans.find((p) => p.id === form.plan)?.name || form.plan })
+  }
+
+  const set = (key) => (e) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+    if (errors[key]) setErrors((errs) => ({ ...errs, [key]: undefined }))
+  }
+
+  const renderField = ({ name, label, icon: Icon, type = 'text', placeholder, error }) => (
+    <div>
+      <label htmlFor={`rg-${name}`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+        <Icon className="h-3.5 w-3.5 text-accent" />
+        {label} <span className="text-accent">*</span>
+      </label>
+      <input
+        id={`rg-${name}`}
+        type={type}
+        value={form[name]}
+        onChange={set(name)}
+        placeholder={placeholder}
+        className={`field ${error ? 'has-error' : ''}`}
+      />
+      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+    </div>
+  )
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Registro de cliente" maxWidth="max-w-2xl">
+      {success ? (
+        <div className="flex flex-col items-center py-6 text-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-volt/15">
+            <CheckCircle2 className="h-10 w-10 text-volt" />
+          </span>
+          <h3 className="mt-5 font-display text-2xl font-bold uppercase text-white">
+            ¡Registro exitoso!
+          </h3>
+          <p className="mt-2 max-w-md text-muted">
+            Bienvenido/a, {form.nombre}. Tu cuenta con el plan{' '}
+            <span className="font-semibold text-accent">
+              {plans.find((p) => p.id === form.plan)?.name}
+            </span>{' '}
+            fue creada. Ya puedes reservar tus clases.
+          </p>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="mt-6 rounded-xl bg-accent px-8 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+          >
+            Continuar
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {renderField({
+              name: 'nombre',
+              label: 'Nombre',
+              icon: User,
+              placeholder: 'Ej. Juan',
+              error: errors.nombre,
+            })}
+            {renderField({
+              name: 'apellido',
+              label: 'Apellido',
+              icon: User,
+              placeholder: 'Ej. Pérez',
+              error: errors.apellido,
+            })}
+            {renderField({
+              name: 'ci',
+              label: 'Cédula de identidad (CI)',
+              icon: CreditCard,
+              placeholder: 'Ej. 1234567',
+              error: errors.ci,
+            })}
+            {renderField({
+              name: 'nacimiento',
+              label: 'Fecha de nacimiento',
+              icon: Cake,
+              type: 'date',
+              error: errors.nacimiento,
+            })}
+            {renderField({
+              name: 'telefono',
+              label: 'Teléfono',
+              icon: Phone,
+              placeholder: 'Ej. +591 71234567',
+              error: errors.telefono,
+            })}
+            {renderField({
+              name: 'correo',
+              label: 'Correo electrónico',
+              icon: Mail,
+              type: 'email',
+              placeholder: 'ejemplo@correo.com',
+              error: errors.correo,
+            })}
+          </div>
+
+          {renderField({
+            name: 'direccion',
+            label: 'Dirección',
+            icon: Home,
+            placeholder: 'Ej. Av. Banzer #1234',
+            error: errors.direccion,
+          })}
+
+          <div>
+            <label htmlFor="rg-plan" className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              <CreditCard className="h-3.5 w-3.5 text-accent" />
+              Plan seleccionado <span className="text-accent">*</span>
+            </label>
+            <select
+              id="rg-plan"
+              value={form.plan}
+              onChange={set('plan')}
+              className={`field ${errors.plan ? 'has-error' : ''}`}
+            >
+              <option value="">Selecciona un plan…</option>
+              {planOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {errors.plan && <p className="mt-1 text-xs text-red-400">{errors.plan}</p>}
+          </div>
+
+          {renderField({
+            name: 'emergencia',
+            label: 'Contacto de emergencia (nombre y teléfono)',
+            icon: HeartPulse,
+            placeholder: 'Ej. María Pérez · +591 70000000',
+            error: errors.emergencia,
+          })}
+
+          <div className="rounded-xl border border-line bg-card-2 px-4 py-3 text-xs text-muted">
+            Al enviar aceptas nuestros términos y políticas de tratamiento de datos.
+          </div>
+
+          <button
+            type="submit"
+            className="btn-sheen w-full rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+          >
+            Crear mi cuenta
+          </button>
+        </form>
+      )}
+    </Modal>
+  )
+}

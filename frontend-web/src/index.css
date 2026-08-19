@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta premium dark mode para gimnasio */
+  --color-ink: #08080a;
+  --color-surface: #0e0e11;
+  --color-card: #151519;
+  --color-card-2: #1a1a1f;
+  --color-line: #26262c;
+  --color-accent: #ff4d00;
+  --color-accent-hover: #ff6a2b;
+  --color-volt: #d8f34e;
+  --color-muted: #9b9ba3;
+
+  /* Tipografía */
+  --font-display: "Oswald", "Archivo", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* Animaciones personalizadas */
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.9s ease both;
+  --animate-marquee: marquee 28s linear infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-ink text-white font-body antialiased;
+  letter-spacing: 0.1px;
+}
+
+::selection {
+  @apply bg-accent text-white;
+}
+
+/* Barra de scroll personalizada */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* Utilidad: texto con degradado */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-accent) 0%, #ffb26b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-volt {
+  background: linear-gradient(135deg, var(--color-volt) 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Utilidad: overlay oscuro para imágenes */
+.overlay-dark {
+  background: linear-gradient(
+    to top,
+    rgba(8, 8, 10, 0.95) 0%,
+    rgba(8, 8, 10, 0.55) 45%,
+    rgba(8, 8, 10, 0.35) 100%
+  );
+}
+
+/* Título de sección con rayas decorativas */
+.section-label {
+  @apply inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em] text-accent;
+}
+
+/* Efecto de relleno en botones al hacer hover */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+.btn-sheen:hover::after {
+  transform: translateX(120%);
+}
+
+/* Cuadrícula decorativa de fondo */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Estilos de campo de formulario */
+.field {
+  @apply w-full rounded-xl border border-line bg-card px-4 py-3 text-sm text-white placeholder-muted outline-none transition;
+}
+.field:focus {
+  @apply border-accent ring-2 ring-accent/20;
+}
+.field.has-error {
+  @apply border-red-500 ring-2 ring-red-500/20;
+}
+
+/* Toggle oculto */
+input[type="checkbox"].toggle {
+  display: none;
+}
