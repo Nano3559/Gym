@@ -12,8 +12,25 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-export default function BookingModal({ bookingClass, currentUser, onClose, onConfirm, onGoRegister }) {
-  const [date, setDate] = useState(todayStr())
+// Módulo 2: lista de sesiones reales disponibles para esta clase (una por fecha).
+function formatSessionLabel(session) {
+  const remaining = session.capacity - session.booked
+  return `${formatDate(session.date)} · ${session.time} hs · ${
+    remaining > 0 ? `${remaining} cupos` : 'Lleno'
+  }`
+}
+
+export default function BookingModal({
+  bookingClass,
+  currentUser,
+  onClose,
+  onConfirm,
+  onGoRegister,
+  availableDates,
+  confirming,
+  onSelectDate,
+}) {
+  const [date, setDate] = useState(bookingClass?.date || todayStr())
   const [confirmed, setConfirmed] = useState(false)
   const minDate = todayStr()
   const maxDate = useMemo(() => {
@@ -24,30 +41,40 @@ export default function BookingModal({ bookingClass, currentUser, onClose, onCon
 
   if (!bookingClass) return null
 
+  const selectedDate = bookingClass.date || date || todayStr()
   const available = bookingClass.capacity - bookingClass.booked
   const full = available <= 0
 
   const handleClose = () => {
     onClose()
     setTimeout(() => {
-      setDate(todayStr())
+      setDate(bookingClass?.date || todayStr())
       setConfirmed(false)
     }, 250)
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!currentUser) {
       onGoRegister()
       return
     }
-    setConfirmed(true)
-    onConfirm({
+    const result = onConfirm({
       classId: bookingClass.id,
       className: bookingClass.name,
       trainer: bookingClass.trainer,
       time: bookingClass.time,
-      date,
+      date: selectedDate,
     })
+    if (result && typeof result.then === 'function') {
+      const ok = await result
+      if (ok === false) return
+    }
+    setConfirmed(true)
+  }
+
+  const handleSessionChange = (value) => {
+    setDate(value)
+    onSelectDate?.(value)
   }
 
   return (
@@ -66,7 +93,7 @@ export default function BookingModal({ bookingClass, currentUser, onClose, onCon
           </h3>
           <p className="mt-2 max-w-md text-muted">
             Te esperamos el{' '}
-            <span className="font-semibold capitalize text-white">{formatDate(date)}</span> a las{' '}
+            <span className="font-semibold capitalize text-white">{formatDate(selectedDate)}</span> a las{' '}
             <span className="font-semibold text-white">{bookingClass.time}</span> en{' '}
             <span className="font-semibold text-accent">{bookingClass.name}</span>.
           </p>
@@ -123,29 +150,44 @@ export default function BookingModal({ bookingClass, currentUser, onClose, onCon
               <CalendarDays className="h-3.5 w-3.5 text-accent" />
               Selecciona la fecha
             </label>
-            <input
-              id="bk-date"
-              type="date"
-              min={minDate}
-              max={maxDate}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="field"
-            />
+            {availableDates ? (
+              <select
+                id="bk-date"
+                value={selectedDate}
+                onChange={(e) => handleSessionChange(e.target.value)}
+                className="field"
+              >
+                {availableDates.map((session) => (
+                  <option key={session.id} value={session.date} disabled={session.capacity - session.booked <= 0}>
+                    {formatSessionLabel(session)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="bk-date"
+                type="date"
+                min={minDate}
+                max={maxDate}
+                value={selectedDate}
+                onChange={(e) => setDate(e.target.value)}
+                className="field"
+              />
+            )}
           </div>
 
           <button
             type="button"
-            disabled={full}
+            disabled={full || confirming}
             onClick={handleConfirm}
             className={`btn-sheen flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold uppercase tracking-wide transition ${
               full
                 ? 'cursor-not-allowed border border-line text-muted'
                 : 'bg-accent text-white hover:bg-accent-hover'
-            }`}
+            } disabled:opacity-60`}
           >
             <CalendarCheck className="h-4 w-4" />
-            Confirmar reserva
+            {confirming ? 'Confirmando…' : 'Confirmar reserva'}
           </button>
         </div>
       )}
