@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Dumbbell, Menu, X } from 'lucide-react'
+import { Dumbbell, LogIn, LogOut, Menu, User, X } from 'lucide-react'
 import { brand, navLinks } from '../data/gymData'
 
-export default function Navbar({ onInscribirme, onVerPlanes }) {
+export default function Navbar({ onInscribirme, onVerPlanes, user, onLogin, onLogout }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -63,13 +63,40 @@ export default function Navbar({ onInscribirme, onVerPlanes }) {
         </ul>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <button
-            type="button"
-            onClick={onInscribirme}
-            className="btn-sheen rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover"
-          >
-            Inscribirme
-          </button>
+          {user ? (
+            <>
+              <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-white">
+                <User className="h-4 w-4 text-accent" />
+                Hola, {user.nombre}
+              </span>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-red-500/50 hover:text-red-400"
+              >
+                <LogOut className="h-4 w-4" />
+                Salir
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onLogin}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
+              >
+                <LogIn className="h-4 w-4" />
+                Iniciar sesión
+              </button>
+              <button
+                type="button"
+                onClick={onInscribirme}
+                className="btn-sheen rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover"
+              >
+                Inscribirme
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={onVerPlanes}
@@ -108,16 +135,49 @@ export default function Navbar({ onInscribirme, onVerPlanes }) {
             ))}
           </ul>
           <div className="mt-4 flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                onInscribirme()
-              }}
-              className="btn-sheen rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white"
-            >
-              Inscribirme
-            </button>
+            {user ? (
+              <>
+                <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-5 py-3 text-sm font-semibold text-white">
+                  <User className="h-4 w-4 text-accent" />
+                  Hola, {user.nombre}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    onLogout()
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-muted"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    onLogin()
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Iniciar sesión
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    onInscribirme()
+                  }}
+                  className="btn-sheen rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Inscribirme
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => {

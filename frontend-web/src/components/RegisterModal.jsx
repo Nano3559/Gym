@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, User, Phone, Mail, Home, Cake, CreditCard, HeartPulse } from 'lucide-react'
+import { CheckCircle2, User, Phone, Mail, Home, Cake, CreditCard, HeartPulse, Lock } from 'lucide-react'
 import { plans } from '../data/gymData'
 import Modal from './ui/Modal'
+import { useAuth } from '../context/AuthContext'
 
 const initialForm = {
   nombre: '',
@@ -13,15 +14,20 @@ const initialForm = {
   direccion: '',
   plan: '',
   emergencia: '',
+  password: '',
+  confirmPassword: '',
 }
 
 export default function RegisterModal({ open, onClose, defaultPlan, onSuccess }) {
+  const { signUp } = useAuth()
   const [form, setForm] = useState(() => ({
     ...initialForm,
     plan: defaultPlan || '',
   }))
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState(false)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const planOptions = useMemo(
     () => plans.map((p) => ({ value: p.id, label: `${p.name} · ${p.currency} ${p.price}/mes` })),
@@ -56,14 +62,26 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
     if (!form.direccion.trim()) errs.direccion = 'La dirección es obligatoria'
     if (!form.plan) errs.plan = 'Selecciona un plan'
     if (!form.emergencia.trim()) errs.emergencia = 'El contacto de emergencia es obligatorio'
+    if (!form.password) errs.password = 'La contraseña es obligatoria'
+    else if (form.password.length < 6) errs.password = 'La contraseña debe tener al menos 6 caracteres'
+    if (!form.confirmPassword) errs.confirmPassword = 'Confirma tu contraseña'
+    else if (form.confirmPassword !== form.password) errs.confirmPassword = 'Las contraseñas no coinciden'
     return errs
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
     setErrors(errs)
     if (Object.keys(errs).length > 0) return
+    setSubmitting(true)
+    const result = await signUp(form)
+    setSubmitting(false)
+    if (!result.ok) {
+      setErrors({ password: result.message })
+      return
+    }
+    setNeedsConfirmation(Boolean(result.needsConfirmation))
     setSuccess(true)
     onSuccess({ ...form, plan: plans.find((p) => p.id === form.plan)?.name || form.plan })
   }
@@ -99,14 +117,24 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
             <CheckCircle2 className="h-10 w-10 text-volt" />
           </span>
           <h3 className="mt-5 font-display text-2xl font-bold uppercase text-white">
-            ¡Registro exitoso!
+            {needsConfirmation ? '¡Cuenta creada!' : '¡Registro exitoso!'}
           </h3>
           <p className="mt-2 max-w-md text-muted">
-            Bienvenido/a, {form.nombre}. Tu cuenta con el plan{' '}
-            <span className="font-semibold text-accent">
-              {plans.find((p) => p.id === form.plan)?.name}
-            </span>{' '}
-            fue creada. Ya puedes reservar tus clases.
+            {needsConfirmation ? (
+              <>
+                Te enviamos un correo a{' '}
+                <span className="font-semibold text-white">{form.correo}</span> para confirmar tu
+                cuenta. Una vez confirmado podrás iniciar sesión y reservar tus clases.
+              </>
+            ) : (
+              <>
+                Bienvenido/a, {form.nombre}. Tu cuenta con el plan{' '}
+                <span className="font-semibold text-accent">
+                  {plans.find((p) => p.id === form.plan)?.name}
+                </span>{' '}
+                fue creada. Ya puedes reservar tus clases.
+              </>
+            )}
           </p>
           <button
             type="button"
@@ -201,15 +229,35 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
             error: errors.emergencia,
           })}
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            {renderField({
+              name: 'password',
+              label: 'Contraseña',
+              icon: Lock,
+              type: 'password',
+              placeholder: 'Mínimo 6 caracteres',
+              error: errors.password,
+            })}
+            {renderField({
+              name: 'confirmPassword',
+              label: 'Confirmar contraseña',
+              icon: Lock,
+              type: 'password',
+              placeholder: 'Repite tu contraseña',
+              error: errors.confirmPassword,
+            })}
+          </div>
+
           <div className="rounded-xl border border-line bg-card-2 px-4 py-3 text-xs text-muted">
             Al enviar aceptas nuestros términos y políticas de tratamiento de datos.
           </div>
 
           <button
             type="submit"
-            className="btn-sheen w-full rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+            disabled={submitting}
+            className="btn-sheen w-full rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:opacity-60"
           >
-            Crear mi cuenta
+            {submitting ? 'Creando cuenta…' : 'Crear mi cuenta'}
           </button>
         </form>
       )}

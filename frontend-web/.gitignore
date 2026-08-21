@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Variables de entorno (Módulo 2 - Supabase). Nunca subir claves reales.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

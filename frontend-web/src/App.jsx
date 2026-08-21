@@ -13,21 +13,51 @@ import Footer from './components/Footer'
 import RegisterModal from './components/RegisterModal'
 import BookingModal from './components/BookingModal'
 import MyBookingsModal from './components/MyBookingsModal'
+import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
-import { weeklyClasses } from './data/gymData'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import useClasses from './hooks/useClasses'
+import useBookings from './hooks/useBookings'
 
-export default function App() {
+function AppContent() {
+  const { user: authUser, profile, signOut } = useAuth()
+
+  // Módulo 2: clases desde Supabase (con Realtime) o datos locales del Módulo 1.
+  const {
+    classesByDay: baseClassesByDay,
+    allSessions,
+    usingDatabase,
+    refresh: refreshClasses,
+  } = useClasses()
+
   const [isRegisterOpen, setRegisterOpen] = useState(false)
   const [registerPlan, setRegisterPlan] = useState('')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [isLoginOpen, setLoginOpen] = useState(false)
 
   const [bookingClass, setBookingClass] = useState(null)
   const [pendingBooking, setPendingBooking] = useState(null)
-  const [bookings, setBookings] = useState([])
+  const [confirmingBooking, setConfirmingBooking] = useState(false)
+  const [localBookings, setLocalBookings] = useState([])
   const [showBookings, setShowBookings] = useState(false)
 
   const [extraBooked, setExtraBooked] = useState({})
   const [toast, setToast] = useState(null)
+
+  // Usuario autenticado (null si no hay sesión). Conserva la forma que el
+  // Módulo 1 esperaba: { nombre, ... }.
+  const currentUser = useMemo(() => {
+    if (!authUser) return null
+    return {
+      id: authUser.id,
+      email: authUser.email,
+      ...(profile || {}),
+      nombre: profile?.nombre || 'Cliente',
+    }
+  }, [authUser, profile])
+
+  // Módulo 2: reservas reales del usuario (Supabase) + locales (fallback/servicios).
+  const { bookings: dbBookings, createBooking, cancelBooking } = useBookings(authUser?.id)
+  const bookings = useMemo(() => [...dbBookings, ...localBookings], [dbBookings, localBookings])
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type })
@@ -39,15 +69,38 @@ export default function App() {
   }, [])
 
   const classesByDay = useMemo(() => {
+    if (usingDatabase) return baseClassesByDay
     const result = {}
-    for (const [day, list] of Object.entries(weeklyClasses)) {
+    for (const [day, list] of Object.entries(baseClassesByDay)) {
       result[day] = list.map((cls) => ({
         ...cls,
         booked: cls.booked + (extraBooked[cls.id] || 0),
       }))
     }
     return result
-  }, [extraBooked])
+  }, [baseClassesByDay, usingDatabase, extraBooked])
+
+  // Sesiones reales disponibles para la clase seleccionada (una por fecha).
+  const availableDates = useMemo(() => {
+    if (!usingDatabase || !bookingClass || bookingClass.localOnly) return null
+    return allSessions
+      .filter((s) => s.name === bookingClass.name && s.time === bookingClass.time)
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+  }, [usingDatabase, bookingClass, allSessions])
+
+  const handleSelectSessionDate = useCallback(
+    (dateStr) => {
+      const sibling = allSessions.find(
+        (s) =>
+          bookingClass &&
+          s.name === bookingClass.name &&
+          s.time === bookingClass.time &&
+          s.date === dateStr
+      )
+      if (sibling) setBookingClass(sibling)
+    },
+    [allSessions, bookingClass]
+  )
 
   const handleInscribirme = useCallback(() => {
     setRegisterPlan('')
@@ -65,7 +118,6 @@ export default function App() {
 
   const handleRegisterSuccess = useCallback(
     (user) => {
-      setCurrentUser(user)
       setRegisterOpen(false)
       showToast(`¡Bienvenido/a, ${user.nombre}! Tu cuenta fue creada correctamente.`)
       if (pendingBooking) {
@@ -75,6 +127,23 @@ export default function App() {
     },
     [pendingBooking, showToast]
   )
+
+  const handleLoginSuccess = useCallback(() => {
+    setLoginOpen(false)
+    showToast('¡Sesión iniciada correctamente!')
+    if (pendingBooking) {
+      setBookingClass(pendingBooking)
+      setPendingBooking(null)
+    }
+  }, [pendingBooking, showToast])
+
+  const handleLogout = useCallback(async () => {
+    await signOut()
+    setLocalBookings([])
+    setExtraBooked({})
+    setShowBookings(false)
+    showToast('Sesión cerrada correctamente.')
+  }, [signOut, showToast])
 
   const handleReserve = useCallback((item) => {
     if (item.schedule) {
@@ -86,6 +155,7 @@ export default function App() {
         time: timeMatch ? timeMatch[1] : '09:00',
         capacity: 20,
         booked: 0,
+        localOnly: true,
       })
       return
     }
@@ -95,31 +165,60 @@ export default function App() {
   const handleGoRegister = useCallback(() => {
     setPendingBooking(bookingClass)
     setBookingClass(null)
-    setRegisterOpen(true)
-  }, [bookingClass])
+    // Con Supabase activo primero ofrecemos iniciar sesión (desde ahí se puede
+    // pasar al registro). Sin Supabase se conserva el flujo del Módulo 1.
+    if (usingDatabase) setLoginOpen(true)
+    else setRegisterOpen(true)
+  }, [bookingClass, usingDatabase])
 
   const handleConfirmBooking = useCallback(
-    (booking) => {
+    async (booking) => {
+      // Módulo 2: reserva persistente en la tabla bookings vía RPC.
+      if (usingDatabase && currentUser && !booking.localOnly) {
+        setConfirmingBooking(true)
+        const result = await createBooking(booking.classId)
+        setConfirmingBooking(false)
+        if (!result.ok) {
+          showToast(result.message, 'error')
+          return false
+        }
+        refreshClasses()
+        showToast('Reserva realizada correctamente.')
+        return true
+      }
+
+      // Flujo local del Módulo 1 (sin Supabase o servicios informativos).
       const newBooking = {
         ...booking,
         id: `${booking.classId}-${Date.now()}`,
         status: 'Confirmada',
+        local: true,
       }
-      setBookings((prev) => [newBooking, ...prev])
+      setLocalBookings((prev) => [newBooking, ...prev])
       setExtraBooked((prev) => ({
         ...prev,
         [booking.classId]: (prev[booking.classId] || 0) + 1,
       }))
       showToast('Reserva realizada correctamente.')
+      return true
     },
-    [showToast]
+    [usingDatabase, currentUser, createBooking, refreshClasses, showToast]
   )
 
   const handleCancelBooking = useCallback(
-    (id) => {
+    async (id) => {
       const booking = bookings.find((b) => b.id === id)
       if (!booking) return
-      setBookings((prev) =>
+
+      if (usingDatabase && !booking.local) {
+        const result = await cancelBooking(id)
+        if (result.ok) showToast('Reserva cancelada.', 'error')
+        else showToast(result.message, 'error')
+        refreshClasses()
+        return
+      }
+
+      setLocalBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status: 'Cancelada' } : b))
       )
       setExtraBooked((prev) => ({
@@ -128,8 +227,17 @@ export default function App() {
       }))
       showToast('Reserva cancelada.', 'error')
     },
-    [bookings, showToast]
+    [bookings, usingDatabase, cancelBooking, refreshClasses, showToast]
   )
+
+  const handleViewBookings = useCallback(() => {
+    // Las reservas son privadas: con Supabase activo requieren sesión.
+    if (usingDatabase && !currentUser) {
+      setLoginOpen(true)
+      return
+    }
+    setShowBookings(true)
+  }, [usingDatabase, currentUser])
 
   const handleSendMessage = useCallback(
     (form) => {
@@ -147,7 +255,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-ink text-white">
-      <Navbar onInscribirme={handleInscribirme} onVerPlanes={handleVerPlanes} />
+      <Navbar
+        onInscribirme={handleInscribirme}
+        onVerPlanes={handleVerPlanes}
+        user={currentUser}
+        onLogin={() => setLoginOpen(true)}
+        onLogout={handleLogout}
+      />
 
       <main>
         <Hero onInscribirme={handleInscribirme} onVerPlanes={handleVerPlanes} />
@@ -159,7 +273,7 @@ export default function App() {
         <Schedules
           classesByDay={classesByDay}
           onReserve={handleReserve}
-          onViewBookings={() => setShowBookings(true)}
+          onViewBookings={handleViewBookings}
           bookingsCount={bookings.filter((b) => b.status === 'Confirmada').length}
         />
         <Gallery />
@@ -179,12 +293,25 @@ export default function App() {
         onSuccess={handleRegisterSuccess}
       />
 
+      <LoginModal
+        open={isLoginOpen}
+        onClose={() => setLoginOpen(false)}
+        onGoRegister={() => {
+          setLoginOpen(false)
+          setRegisterOpen(true)
+        }}
+        onSuccess={handleLoginSuccess}
+      />
+
       <BookingModal
         bookingClass={bookingClass}
         currentUser={currentUser}
         onClose={() => setBookingClass(null)}
         onConfirm={handleConfirmBooking}
         onGoRegister={handleGoRegister}
+        availableDates={availableDates}
+        confirming={confirmingBooking}
+        onSelectDate={handleSelectSessionDate}
       />
 
       <MyBookingsModal
@@ -196,5 +323,13 @@ export default function App() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }

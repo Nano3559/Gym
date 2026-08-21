@@ -1,9 +1,16 @@
-import { CalendarDays, Clock3, User, XCircle, Inbox } from 'lucide-react'
+import { CalendarDays, CalendarPlus, Clock3, User, XCircle, Inbox } from 'lucide-react'
 import Modal from './ui/Modal'
 
 const statusStyle = {
   Confirmada: 'bg-volt/15 text-volt',
   Cancelada: 'bg-red-500/15 text-red-400',
+}
+
+// Módulo 2: formatea la fecha en que se creó la reserva.
+function formatCreatedAt(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function MyBookingsModal({ open, onClose, bookings, onCancel }) {
@@ -38,7 +45,7 @@ export default function MyBookingsModal({ open, onClose, bookings, onCancel }) {
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="h-3.5 w-3.5 text-accent" />
-                    {booking.date}
+                    {booking.date || '—'}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Clock3 className="h-3.5 w-3.5 text-accent" />
@@ -48,6 +55,12 @@ export default function MyBookingsModal({ open, onClose, bookings, onCancel }) {
                     <User className="h-3.5 w-3.5 text-accent" />
                     {booking.trainer}
                   </span>
+                  {formatCreatedAt(booking.createdAt) && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarPlus className="h-3.5 w-3.5 text-accent" />
+                      Reservada el {formatCreatedAt(booking.createdAt)}
+                    </span>
+                  )}
                 </div>
               </div>
               {booking.status === 'Confirmada' && (
