@@ -116,7 +116,7 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
       const qrPayload = generarPayloadQR(user, plan, transactionId)
       const { ok, message } = await crearRegistroPagoPendiente({
         userId: user?.id,
-        planId: plan?.id,
+        planId: plan?.db_id || plan?.id,
         monto: plan?.price,
         metodoPago: metodo,
         transactionId,
@@ -165,7 +165,7 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
     const { ok, message, membership } = await confirmarPagoExitoso({
       transactionId: mvi.transactionId,
       userId: user?.id,
-      planId: plan?.id,
+      planId: plan?.db_id || plan?.id,
       monto: plan?.price,
       metodoPago: metodo,
     })

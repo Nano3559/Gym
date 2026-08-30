@@ -2,11 +2,36 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 const MONEDA = 'BOB'
 
+const UUID_FALLBACK = '00000000-0000-0000-0000-000000000001'
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * Servicio de pagos (Módulo 5).
  * Toda operación verifica que Supabase esté configurado; en caso contrario
  * devuelve errores controlados para que la landing local siga funcionando.
  */
+
+/**
+ * Resuelve el ID de un plan a un UUID válido.
+ * Los planes de la landing usan slugs legibles ("completo", "basico", ...)
+ * mientras que la BD `plans` usa UUIDs, así que traducimos por nombre.
+ * @param {string} planId ID del plan (slug o UUID).
+ * @returns {Promise<string>} UUID del plan (o un UUID de respaldo si no se resuelve).
+ */
+async function resolverPlanIdUUID(planId) {
+  if (!planId) return UUID_FALLBACK
+  if (UUID_REGEX.test(planId)) return planId
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('id')
+      .ilike('nombre', `%${planId}%`)
+      .maybeSingle()
+    if (!error && data?.id) return data.id
+  }
+  return UUID_FALLBACK
+}
 
 /** Genera un ID de transacción único (prefijo legible + uuid corto). */
 export function generarTransactionId() {
@@ -45,9 +70,10 @@ export async function crearRegistroPagoPendiente({ userId, planId, monto, metodo
   if (!isSupabaseConfigured || !supabase) {
     return { ok: false, message: 'Supabase no está configurado.' }
   }
+  const planUUID = await resolverPlanIdUUID(planId)
   const { error } = await supabase.from('payments').insert({
     user_id: userId,
-    plan_id: planId,
+    plan_id: planUUID,
     monto,
     metodo_pago: metodoPago,
     estado_pago: 'pendiente',
@@ -66,10 +92,11 @@ export async function confirmarPagoExitoso({ transactionId, userId, planId, mont
   if (!isSupabaseConfigured || !supabase) {
     return { ok: false, message: 'Supabase no está configurado.' }
   }
+  const planUUID = await resolverPlanIdUUID(planId)
   const { data, error } = await supabase.rpc('procesar_pago_exitoso', {
     p_transaction_id: transactionId,
     p_user_id: userId,
-    p_plan_id: planId,
+    p_plan_id: planUUID,
     p_monto: monto,
     p_metodo_pago: metodoPago,
   })
