@@ -13,6 +13,7 @@ import Footer from './components/Footer'
 import RegisterModal from './components/RegisterModal'
 import BookingModal from './components/BookingModal'
 import MyBookingsModal from './components/MyBookingsModal'
+import PaymentModal from './components/PaymentModal'
 import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -20,7 +21,7 @@ import useClasses from './hooks/useClasses'
 import useBookings from './hooks/useBookings'
 
 function AppContent() {
-  const { user: authUser, profile, signOut } = useAuth()
+  const { user: authUser, profile, signOut, reloadProfile } = useAuth()
 
   // Módulo 2: clases desde Supabase (con Realtime) o datos locales del Módulo 1.
   const {
@@ -33,6 +34,10 @@ function AppContent() {
   const [isRegisterOpen, setRegisterOpen] = useState(false)
   const [registerPlan, setRegisterPlan] = useState('')
   const [isLoginOpen, setLoginOpen] = useState(false)
+
+  // Módulo 5: pasarela de pagos desde la selección de planes.
+  const [paymentPlan, setPaymentPlan] = useState(null)
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false)
 
   const [bookingClass, setBookingClass] = useState(null)
   const [pendingBooking, setPendingBooking] = useState(null)
@@ -111,10 +116,26 @@ function AppContent() {
     scrollTo('#planes')
   }, [scrollTo])
 
-  const handleSelectPlan = useCallback((plan) => {
-    setRegisterPlan(plan.id)
-    setRegisterOpen(true)
-  }, [])
+  const handleSelectPlan = useCallback(
+    (plan) => {
+      // Módulo 5: un usuario autenticado paga directamente; si no, se registra.
+      if (usingDatabase && currentUser) {
+        setPaymentPlan(plan)
+        setPaymentModalOpen(true)
+        return
+      }
+      setRegisterPlan(plan.id)
+      setRegisterOpen(true)
+    },
+    [usingDatabase, currentUser]
+  )
+
+  const handlePaymentSuccess = useCallback(() => {
+    setPaymentModalOpen(false)
+    setPaymentPlan(null)
+    reloadProfile()
+    showToast('Membresía activada correctamente.')
+  }, [reloadProfile, showToast])
 
   const handleRegisterSuccess = useCallback(
     (user) => {
@@ -319,6 +340,17 @@ function AppContent() {
         onClose={() => setShowBookings(false)}
         bookings={bookings}
         onCancel={handleCancelBooking}
+      />
+
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setPaymentModalOpen(false)
+          setPaymentPlan(null)
+        }}
+        plan={paymentPlan}
+        user={currentUser}
+        onSuccess={handlePaymentSuccess}
       />
 
       <Toast toast={toast} onClose={() => setToast(null)} />

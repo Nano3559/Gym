@@ -90,7 +90,7 @@ function Spinner() {
   return <Loader2 className="h-5 w-5 animate-spin" />
 }
 
-export default function PaymentModal({ isOpen, onClose, plan, user }) {
+export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess }) {
   const mvi = usePaymentMVI()
   const [metodo, setMetodo] = useState('qr')
   const [segundosRestantes, setSegundosRestantes] = useState(EXPIRACION_SEGUNDOS)
@@ -190,6 +190,7 @@ export default function PaymentModal({ isOpen, onClose, plan, user }) {
 
   const handleFinish = () => {
     mvi.reset()
+    onSuccess?.(mvi.membership)
     onClose()
   }
 
