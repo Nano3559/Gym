@@ -90,10 +90,87 @@ function Spinner() {
   return <Loader2 className="h-5 w-5 animate-spin" />
 }
 
+// ---------------------------------------------------------------------------
+// Utilidades de formato y validación de tarjeta.
+// ---------------------------------------------------------------------------
+function formatCardNumber(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 16)
+  return digits.replace(/(.{4})/g, '$1 ').trim()
+}
+
+function formatExpiry(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 4)
+  if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return digits
+}
+
+function isValidCardNumber(value) {
+  return value.replace(/\D/g, '').length === 16
+}
+
+function isValidExpiry(value) {
+  return /^\d{2}\/\d{2}$/.test(value)
+}
+
+// ---------------------------------------------------------------------------
+// Vista previa animada de la tarjeta.
+// ---------------------------------------------------------------------------
+function CardPreview({ number, name, expiry }) {
+  const displayNumber = number || '•••• •••• •••• ••••'
+  return (
+    <div className="relative aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-700 via-zinc-900 to-black p-5 text-white shadow-xl ring-1 ring-white/10 transition-transform duration-300 hover:scale-[1.02]">
+      <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-accent/30 blur-2xl" />
+      <div className="absolute -bottom-12 -left-6 h-40 w-40 rounded-full bg-zinc-600/30 blur-2xl" />
+      <div className="relative flex h-full flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <CreditCard className="h-7 w-7 text-accent" />
+          <span className="font-display text-xs font-semibold uppercase tracking-widest text-zinc-300">
+            Gym
+          </span>
+        </div>
+        <div>
+          <p className="font-mono text-xl tracking-wider">{displayNumber}</p>
+          <div className="mt-3 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-400">Titular</p>
+              <p className="truncate text-sm font-semibold uppercase">{name || 'TU NOMBRE'}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-400">Vence</p>
+              <p className="font-mono text-sm">{expiry || 'MM/AA'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Input etiquetado reutilizable para el formulario de tarjeta.
+// ---------------------------------------------------------------------------
+function CardField({ label, ...props }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
+        {label}
+      </span>
+      <input
+        {...props}
+        className="w-full rounded-xl border border-line bg-card-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-accent"
+      />
+    </label>
+  )
+}
+
 export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess }) {
   const mvi = usePaymentMVI()
   const [metodo, setMetodo] = useState('qr')
   const [segundosRestantes, setSegundosRestantes] = useState(EXPIRACION_SEGUNDOS)
+  const [cardNumero, setCardNumero] = useState('')
+  const [cardNombre, setCardNombre] = useState('')
+  const [cardExpiracion, setCardExpiracion] = useState('')
+  const [cardCvc, setCardCvc] = useState('')
 
   const status = mvi.status
   const processing = status === PAYMENT_STATUS.PROCESSING
@@ -196,6 +273,15 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
 
   const monto = Number(plan?.price ?? 0)
 
+  const tarjetaValida = useMemo(
+    () =>
+      isValidCardNumber(cardNumero) &&
+      cardNombre.trim().length > 0 &&
+      isValidExpiry(cardExpiracion) &&
+      cardCvc.replace(/\D/g, '').length >= 3,
+    [cardNumero, cardNombre, cardExpiracion, cardCvc]
+  )
+
   return (
     <Modal open={isOpen} onClose={handleClose} title="Pagar membresía">
       {status === PAYMENT_STATUS.GENERATING_QR && (
@@ -261,14 +347,71 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
             </>
           )}
 
-          {metodo !== 'qr' && (
+          {metodo !== 'qr' && metodo !== 'tarjeta' && (
             <div className="rounded-xl border border-line bg-white/5 px-5 py-4 text-sm text-muted">
               {metodo === 'efectivo' &&
                 'Realiza el pago en caja del gimnasio y confirma la transacción a continuación.'}
               {metodo === 'transferencia' &&
                 'Transfiere a la cuenta del gimnasio (Agencia Central) y usa tu ID de transacción como referencia.'}
-              {metodo === 'tarjeta' &&
-                'Toca el botón de prueba para simular el cargo a tu tarjeta.'}
+            </div>
+          )}
+
+          {metodo === 'tarjeta' && (
+            <div className="space-y-5">
+              <div className="flex flex-col items-center">
+                <CardPreview
+                  number={cardNumero}
+                  name={cardNombre}
+                  expiry={cardExpiracion}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <CardField
+                  label="Número de tarjeta"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="1234 5678 9012 3456"
+                  autoComplete="cc-number"
+                  value={cardNumero}
+                  onChange={(e) => setCardNumero(formatCardNumber(e.target.value))}
+                />
+                <CardField
+                  label="Nombre en la tarjeta"
+                  type="text"
+                  placeholder="NOMBRE APELLIDO"
+                  autoComplete="cc-name"
+                  value={cardNombre}
+                  onChange={(e) => setCardNombre(e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <CardField
+                    label="Fecha de expiración"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="MM/AA"
+                    autoComplete="cc-exp"
+                    value={cardExpiracion}
+                    onChange={(e) => setCardExpiracion(formatExpiry(e.target.value))}
+                  />
+                  <CardField
+                    label="CVC / CVV"
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="123"
+                    autoComplete="cc-csc"
+                    maxLength={4}
+                    value={cardCvc}
+                    onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+              </div>
+
+              {!tarjetaValida && (
+                <p className="text-center text-xs text-muted">
+                  Completa los datos de tu tarjeta para habilitar el pago.
+                </p>
+              )}
             </div>
           )}
 
@@ -276,10 +419,11 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
           <button
             type="button"
             onClick={handleSimular}
-            className="btn-sheen flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+            disabled={metodo === 'tarjeta' && !tarjetaValida}
+            className="btn-sheen flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Simular Pago Exitoso
+            {metodo === 'tarjeta' ? `Pagar Bs. ${monto}` : 'Simular Pago Exitoso'}
           </button>
         </div>
       )}
