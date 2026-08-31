@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2, User, Phone, Mail, Home, Cake, CreditCard, HeartPulse, Lock } from 'lucide-react'
-import { plans } from '../data/gymData'
 import Modal from './ui/Modal'
 import { useAuth } from '../context/AuthContext'
 
@@ -12,7 +11,6 @@ const initialForm = {
   telefono: '',
   correo: '',
   direccion: '',
-  plan: '',
   emergencia: '',
   password: '',
   confirmPassword: '',
@@ -29,10 +27,14 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  const planOptions = useMemo(
-    () => plans.map((p) => ({ value: p.id, label: `${p.name} · ${p.currency} ${p.price}/mes` })),
-    []
-  )
+  // Fecha máxima permitida: 14 años atrás (exige mayoría de 14 años).
+  const maxBirthDate = useMemo(() => {
+    const pad = (n) => String(n).padStart(2, '0')
+    // oxlint-disable-next-line react/purity -- calculado una sola vez al montar
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 14)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  }, [])
 
   const reset = () => {
     setForm(initialForm)
@@ -47,12 +49,26 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
 
   const validate = () => {
     const errs = {}
+    const namePattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/
     if (!form.nombre.trim()) errs.nombre = 'El nombre es obligatorio'
+    else if (!namePattern.test(form.nombre.trim())) errs.nombre = 'Solo se permiten letras en este campo'
     if (!form.apellido.trim()) errs.apellido = 'El apellido es obligatorio'
+    else if (!namePattern.test(form.apellido.trim()))
+      errs.apellido = 'Solo se permiten letras en este campo'
     if (!form.ci.trim()) errs.ci = 'El CI es obligatorio'
     else if (!/^\d{5,10}$/.test(form.ci.trim()))
       errs.ci = 'Ingresa un CI válido (5 a 10 dígitos)'
-    if (!form.nacimiento) errs.nacimiento = 'Selecciona tu fecha de nacimiento'
+    if (!form.nacimiento) {
+      errs.nacimiento = 'Selecciona tu fecha de nacimiento'
+    } else {
+      // oxlint-disable-next-line react/purity -- cálculo de edad al validar
+      const now = new Date()
+      const birth = new Date(`${form.nacimiento}T00:00:00`)
+      let age = now.getFullYear() - birth.getFullYear()
+      const m = now.getMonth() - birth.getMonth()
+      if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age -= 1
+      if (age < 14) errs.nacimiento = 'Debes ser mayor de 14 años para registrarte'
+    }
     if (!form.telefono.trim()) errs.telefono = 'El teléfono es obligatorio'
     else if (!/^\+?\d{7,12}$/.test(form.telefono.trim()))
       errs.telefono = 'Ingresa un teléfono válido'
@@ -60,7 +76,6 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim()))
       errs.correo = 'Ingresa un correo válido'
     if (!form.direccion.trim()) errs.direccion = 'La dirección es obligatoria'
-    if (!form.plan) errs.plan = 'Selecciona un plan'
     if (!form.emergencia.trim()) errs.emergencia = 'El contacto de emergencia es obligatorio'
     if (!form.password) errs.password = 'La contraseña es obligatoria'
     else if (form.password.length < 6) errs.password = 'La contraseña debe tener al menos 6 caracteres'
@@ -83,7 +98,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
     }
     setNeedsConfirmation(Boolean(result.needsConfirmation))
     setSuccess(true)
-    onSuccess({ ...form, plan: plans.find((p) => p.id === form.plan)?.name || form.plan })
+    onSuccess(form)
   }
 
   const set = (key) => (e) => {
@@ -91,7 +106,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
     if (errors[key]) setErrors((errs) => ({ ...errs, [key]: undefined }))
   }
 
-  const renderField = ({ name, label, icon: Icon, type = 'text', placeholder, error }) => (
+  const renderField = ({ name, label, icon: Icon, type = 'text', placeholder, max, error }) => (
     <div>
       <label htmlFor={`rg-${name}`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
         <Icon className="h-3.5 w-3.5 text-accent" />
@@ -103,6 +118,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
         value={form[name]}
         onChange={set(name)}
         placeholder={placeholder}
+        max={max}
         className={`field ${error ? 'has-error' : ''}`}
       />
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
@@ -128,11 +144,8 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
               </>
             ) : (
               <>
-                Bienvenido/a, {form.nombre}. Tu cuenta con el plan{' '}
-                <span className="font-semibold text-accent">
-                  {plans.find((p) => p.id === form.plan)?.name}
-                </span>{' '}
-                fue creada. Ya puedes reservar tus clases.
+                Bienvenido/a, {form.nombre}. Tu cuenta fue creada correctamente.
+                Ya puedes iniciar sesión, elegir un plan y reservar tus clases.
               </>
             )}
           </p>
@@ -173,6 +186,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
               label: 'Fecha de nacimiento',
               icon: Cake,
               type: 'date',
+              max: maxBirthDate,
               error: errors.nacimiento,
             })}
             {renderField({
@@ -199,27 +213,6 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
             placeholder: 'Ej. Av. Banzer #1234',
             error: errors.direccion,
           })}
-
-          <div>
-            <label htmlFor="rg-plan" className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              <CreditCard className="h-3.5 w-3.5 text-accent" />
-              Plan seleccionado <span className="text-accent">*</span>
-            </label>
-            <select
-              id="rg-plan"
-              value={form.plan}
-              onChange={set('plan')}
-              className={`field ${errors.plan ? 'has-error' : ''}`}
-            >
-              <option value="">Selecciona un plan…</option>
-              {planOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            {errors.plan && <p className="mt-1 text-xs text-red-400">{errors.plan}</p>}
-          </div>
 
           {renderField({
             name: 'emergencia',
