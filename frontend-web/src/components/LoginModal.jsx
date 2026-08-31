@@ -44,7 +44,7 @@ export default function LoginModal({ open, onClose, onGoRegister, onSuccess }) {
       return
     }
     handleClose()
-    onSuccess?.()
+    onSuccess?.(result.demo ? 'Sesión iniciada como Recepción' : undefined)
   }
 
   return (
