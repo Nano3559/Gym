@@ -18,15 +18,16 @@ import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
 import AdminPanel from './components/admin/AdminPanel'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { PlansProvider, usePlans } from './context/PlansContext'
 import useClasses from './hooks/useClasses'
 import useBookings from './hooks/useBookings'
 import useMembership from './hooks/useMembership'
-import { plans } from './data/gymData'
 import { isReceptionUser } from './lib/receptionAccess'
 import { isAdminUser } from './lib/adminAccess'
 
 function AppContent() {
   const { user: authUser, profile, signOut, reloadProfile } = useAuth()
+  const { plans } = usePlans()
 
   // Módulo 2: clases desde Supabase (con Realtime) o datos locales del Módulo 1.
   const {
@@ -87,7 +88,7 @@ function AppContent() {
       daysRemaining,
       features: plan?.features || [],
     }
-  }, [membership])
+  }, [membership, plans])
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type })
@@ -427,7 +428,12 @@ function AppContent() {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Módulo 6: panel de recepción (solo visible para la cuenta autorizada). */}
-      <AdminPanel open={isAdminOpen} onClose={() => setAdminOpen(false)} onToast={showToast} />
+      <AdminPanel
+        open={isAdminOpen}
+        onClose={() => setAdminOpen(false)}
+        onToast={showToast}
+        isAdminUser={isAdminUser(currentUser)}
+      />
     </div>
   )
 }
@@ -435,7 +441,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <PlansProvider>
+        <AppContent />
+      </PlansProvider>
     </AuthProvider>
   )
 }

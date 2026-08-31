@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, Dumbbell, LayoutDashboard, Users, X } from 'lucide-react'
+import { ClipboardCheck, Dumbbell, FileBarChart, LayoutDashboard, Settings2, Users, X } from 'lucide-react'
 import useAdminClients from '../../hooks/useAdminClients'
 import AttendanceControl from './AttendanceControl'
 import ClientsManagement from './ClientsManagement'
 import AdminDashboard from './AdminDashboard'
+import AdminReports from './AdminReports'
+import PlanManagement from './PlanManagement'
 
-export default function AdminPanel({ open, onClose, onToast }) {
+export default function AdminPanel({ open, onClose, onToast, isAdminUser = false }) {
   const [tab, setTab] = useState('dashboard')
   const admin = useAdminClients()
+  const isAdmin = isAdminUser
 
   useEffect(() => {
     if (!open) return undefined
@@ -39,11 +42,13 @@ export default function AdminPanel({ open, onClose, onToast }) {
               </span>
               <div>
                 <h1 className="font-display text-xl font-bold uppercase tracking-wide text-white">
-                  Panel de Recepción
+                  {isAdmin ? 'Panel Administrativo' : 'Panel de Recepción'}
                 </h1>
                 <p className="flex items-center gap-1.5 text-xs text-muted">
                   <ClipboardCheck className="h-3.5 w-3.5 text-accent" />
-                  Control de asistencia y gestión de clientes
+                  {isAdmin
+                    ? 'Métricas, reportes y gestión de planes'
+                    : 'Control de asistencia y gestión de clientes'}
                 </p>
               </div>
             </div>
@@ -94,6 +99,34 @@ export default function AdminPanel({ open, onClose, onToast }) {
               <Users className="h-4 w-4" />
               Gestión de Clientes
             </button>
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setTab('reports')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    tab === 'reports'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-line text-muted hover:text-white'
+                  }`}
+                >
+                  <FileBarChart className="h-4 w-4" />
+                  Reportes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('plans')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    tab === 'plans'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-line text-muted hover:text-white'
+                  }`}
+                >
+                  <Settings2 className="h-4 w-4" />
+                  Gestión de Planes
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -108,6 +141,10 @@ export default function AdminPanel({ open, onClose, onToast }) {
             onRegisterAttendance={admin.registerAttendance}
             onToast={onToast}
           />
+        ) : tab === 'reports' && isAdmin ? (
+          <AdminReports />
+        ) : tab === 'plans' && isAdmin ? (
+          <PlanManagement onToast={onToast} />
         ) : (
           <ClientsManagement
             clients={admin.clients}

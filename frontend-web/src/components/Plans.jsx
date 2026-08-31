@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { BadgeCheck, CalendarClock, Check, Zap } from 'lucide-react'
-import { plans } from '../data/gymData'
+import { usePlans } from '../context/PlansContext'
 
 export default function Plans({ onSelectPlan, activePlan }) {
   const [showAll, setShowAll] = useState(false)
+  const { activePlans: plans } = usePlans()
 
   return (
     <section id="planes" className="relative bg-surface py-20 sm:py-24">
