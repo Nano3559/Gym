@@ -2,7 +2,6 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 const MONEDA = 'BOB'
 
-const UUID_FALLBACK = '00000000-0000-0000-0000-000000000001'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
@@ -12,25 +11,45 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  */
 
 /**
- * Resuelve el ID de un plan a un UUID válido.
- * Los planes de la landing usan slugs legibles ("completo", "basico", ...)
- * mientras que la BD `plans` usa UUIDs, así que traducimos por nombre.
- * @param {string} planId ID del plan (slug o UUID).
- * @returns {Promise<string>} UUID del plan (o un UUID de respaldo si no se resuelve).
+ * Resuelve el ID de un plan a un UUID válido que exista en `plans`.
+ * Los planes de la landing usan slugs legibles ("basico", "completo", ...) o
+ * nombres ("Plan Básico"), mientras que la BD `plans` usa UUIDs, así que
+ * traducimos buscando primero por `codigo` (slug) y después por `nombre`.
+ * Si no se encuentra, se usa como respaldo un plan real (el más económico),
+ * evitando así asignar un UUID inexistente y romper la clave foránea.
+ * @param {string} planId ID del plan (slug, nombre o UUID).
+ * @returns {Promise<string|null>} UUID real del plan, o null si no hay BD.
  */
 async function resolverPlanIdUUID(planId) {
-  if (!planId) return UUID_FALLBACK
+  if (!planId) return null
   if (UUID_REGEX.test(planId)) return planId
 
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('plans')
-      .select('id')
-      .ilike('nombre', `%${planId}%`)
-      .maybeSingle()
-    if (!error && data?.id) return data.id
-  }
-  return UUID_FALLBACK
+  if (!isSupabaseConfigured || !supabase) return null
+
+  // 1) Match exacto por `codigo` (slug), fuente que usa la landing.
+  const { data: porCodigo } = await supabase
+    .from('plans')
+    .select('id')
+    .eq('codigo', planId)
+    .maybeSingle()
+  if (porCodigo?.id) return porCodigo.id
+
+  // 2) Match por `nombre` (búsqueda insensible a mayúsculas).
+  const { data: porNombre } = await supabase
+    .from('plans')
+    .select('id')
+    .ilike('nombre', `%${planId}%`)
+    .maybeSingle()
+  if (porNombre?.id) return porNombre.id
+
+  // 3) Respaldo: un plan real existente en la BD (no un UUID inventado).
+  const { data: respaldo } = await supabase
+    .from('plans')
+    .select('id')
+    .order('precio', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return respaldo?.id || null
 }
 
 /** Genera un ID de transacción único (prefijo legible + uuid corto). */
@@ -71,15 +90,16 @@ export async function crearRegistroPagoPendiente({ userId, planId, monto, metodo
     return { ok: false, message: 'Supabase no está configurado.' }
   }
   const planUUID = await resolverPlanIdUUID(planId)
-  const { error } = await supabase.from('payments').insert({
+  const fila = {
     user_id: userId,
-    plan_id: planUUID,
     monto,
     metodo_pago: metodoPago,
     estado_pago: 'pendiente',
     transaction_id: transactionId,
     qr_code_payload: qrPayload,
-  })
+  }
+  if (planUUID) fila.plan_id = planUUID
+  const { error } = await supabase.from('payments').insert(fila)
   if (error) return { ok: false, message: error.message }
   return { ok: true }
 }
@@ -93,6 +113,9 @@ export async function confirmarPagoExitoso({ transactionId, userId, planId, mont
     return { ok: false, message: 'Supabase no está configurado.' }
   }
   const planUUID = await resolverPlanIdUUID(planId)
+  if (!planUUID) {
+    return { ok: false, message: 'No se pudo resolver un plan válido para confirmar el pago.' }
+  }
   const { data, error } = await supabase.rpc('procesar_pago_exitoso', {
     p_transaction_id: transactionId,
     p_user_id: userId,

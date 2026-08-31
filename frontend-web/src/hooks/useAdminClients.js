@@ -28,34 +28,59 @@ export default function useAdminClients() {
     if (!isSupabaseConfigured || !supabase) return
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('memberships')
-        .select(
-          'user_id, fecha_inicio, fecha_vencimiento, plans(codigo, nombre), profiles(nombre, apellido, ci, telefono)'
-        )
-      if (error) throw error
-      if (data?.length) {
-        const map = new Map()
-        for (const m of data) {
-          const uid = m.user_id
-          const vencimiento = m.fecha_vencimiento ? m.fecha_vencimiento.slice(0, 10) : ''
-          const prev = map.get(uid)
-          if (!prev || vencimiento > prev.fechaVencimiento) {
-            map.set(uid, {
-              id: uid,
-              nombre: m.profiles?.nombre || '',
-              apellido: m.profiles?.apellido || '',
-              ci: m.profiles?.ci || '',
-              telefono: m.profiles?.telefono || '',
-              plan: m.plans?.codigo || '',
-              planNombre: m.plans?.nombre || '',
-              fechaInicio: m.fecha_inicio ? m.fecha_inicio.slice(0, 10) : '',
-              fechaVencimiento: vencimiento,
-              photo: null,
-            })
-          }
+      // 1) Todos los usuarios registrados (profiles), el catálogo de planes y las
+      //    membresías para calcular fechas de inicio/vencimiento.
+      const [perfilesRes, planesRes, membresiasRes] = await Promise.all([
+        supabase.from('profiles').select('id, nombre, apellido, ci, telefono, plan_id'),
+        supabase.from('plans').select('id, codigo, nombre'),
+        supabase.from('memberships').select('user_id, plan_id, fecha_inicio, fecha_vencimiento'),
+      ])
+      if (perfilesRes.error) throw perfilesRes.error
+
+      const planesById = new Map((planesRes.data || []).map((p) => [p.id, p]))
+      const planInfo = (planId) => {
+        const p = planesById.get(planId)
+        return { plan: p?.codigo || '', planNombre: p?.nombre || '' }
+      }
+
+      // Última (más reciente) membresía por usuario.
+      const membresiaPorUsuario = new Map()
+      for (const m of membresiasRes.data || []) {
+        const vencimiento = m.fecha_vencimiento ? m.fecha_vencimiento.slice(0, 10) : ''
+        const prev = membresiaPorUsuario.get(m.user_id)
+        if (!prev || vencimiento > prev.fechaVencimiento) {
+          membresiaPorUsuario.set(m.user_id, {
+            plan_id: m.plan_id,
+            fechaInicio: m.fecha_inicio ? m.fecha_inicio.slice(0, 10) : '',
+            fechaVencimiento: vencimiento,
+          })
         }
-        if (map.size) setClients([...map.values()])
+      }
+
+      // 2) Mapea cada usuario real al formato de la tabla de clientes.
+      const reales = (perfilesRes.data || []).map((p) => {
+        const mem = membresiaPorUsuario.get(p.id) || {}
+        const plan = planInfo(mem.plan_id || p.plan_id)
+        return {
+          id: p.id,
+          nombre: p.nombre || '',
+          apellido: p.apellido || '',
+          ci: p.ci || '',
+          telefono: p.telefono || '',
+          plan: plan.plan,
+          planNombre: plan.planNombre,
+          fechaInicio: mem.fechaInicio || '',
+          fechaVencimiento: mem.fechaVencimiento || '',
+          photo: null,
+        }
+      })
+
+      // 3) Fusiona los usuarios reales al inicio, combinándolos con los datos
+      //    estáticos de prueba (sin duplicar).
+      if (reales.length) {
+        const realIds = new Set(reales.map((c) => c.id))
+        const restantes = seedClients.filter((c) => !realIds.has(c.id))
+        setClients([...reales, ...restantes])
       }
     } catch {
       // Fallback: se conservan los datos de la semilla local.
