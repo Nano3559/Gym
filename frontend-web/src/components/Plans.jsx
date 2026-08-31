@@ -1,7 +1,10 @@
-import { Check, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { BadgeCheck, CalendarClock, Check, Zap } from 'lucide-react'
 import { plans } from '../data/gymData'
 
-export default function Plans({ onSelectPlan }) {
+export default function Plans({ onSelectPlan, activePlan }) {
+  const [showAll, setShowAll] = useState(false)
+
   return (
     <section id="planes" className="relative bg-surface py-20 sm:py-24">
       <div className="absolute inset-0 bg-grid opacity-40" />
@@ -21,7 +24,52 @@ export default function Plans({ onSelectPlan }) {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-3 lg:items-stretch">
+        {activePlan && !showAll && (
+          <div className="relative mx-auto mt-12 max-w-3xl overflow-hidden rounded-3xl border border-accent/40 bg-gradient-to-br from-accent/15 to-card p-8 shadow-2xl shadow-accent/20 sm:p-10">
+            <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-accent/20 blur-3xl" />
+            <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-accent text-white shadow-lg shadow-accent/30">
+                <BadgeCheck className="h-10 w-10" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-widest text-accent">
+                  Mi plan activo
+                </p>
+                <h3 className="mt-1 font-display text-3xl font-bold uppercase text-white">
+                  {activePlan.name}
+                </h3>
+                <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-volt">
+                  <CalendarClock className="h-4 w-4" />
+                  {activePlan.daysRemaining === 0
+                    ? 'Tu membresía vence hoy'
+                    : `${activePlan.daysRemaining} días restantes de tu membresía`}
+                </p>
+              </div>
+            </div>
+
+            <ul className="relative mt-8 grid gap-3 border-t border-line pt-8 sm:grid-cols-2">
+              {(activePlan.features || []).map((feature) => (
+                <li key={feature} className="flex items-start gap-3 text-sm">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  </span>
+                  <span className="text-muted">{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="relative mt-8 w-full rounded-xl border border-line px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:border-accent hover:bg-accent/10 hover:text-accent"
+            >
+              Renovar o Cambiar Plan
+            </button>
+          </div>
+        )}
+
+        {(activePlan ? showAll : true) && (
+          <div className="mt-14 grid gap-6 lg:grid-cols-3 lg:items-stretch">
           {plans.map((plan) => (
             <article
               key={plan.id}
@@ -84,6 +132,20 @@ export default function Plans({ onSelectPlan }) {
             </article>
           ))}
         </div>
+        )}
+
+        {activePlan && showAll && (
+          <div className="mt-8 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAll(false)}
+              className="inline-flex items-center gap-2 rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
+            >
+              <BadgeCheck className="h-4 w-4" />
+              Ver mi plan activo
+            </button>
+          </div>
+        )}
       </div>
     </section>
   )

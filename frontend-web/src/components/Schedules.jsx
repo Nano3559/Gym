@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { CalendarCheck, Clock3, User, Users, Flame, History } from 'lucide-react'
+import { CalendarCheck, Clock3, User, Users, Flame, History, Lock } from 'lucide-react'
 import { scheduleDays } from '../data/gymData'
+import { isClassIncluded } from '../lib/planAccess'
 
 function CapacityBar({ available, capacity }) {
   const pct = Math.round(((capacity - available) / capacity) * 100)
@@ -20,10 +21,25 @@ function CapacityBar({ available, capacity }) {
   )
 }
 
-export default function Schedules({ classesByDay, onReserve, onViewBookings, bookingsCount }) {
+export default function Schedules({
+  classesByDay,
+  onReserve,
+  onViewBookings,
+  bookingsCount,
+  planCode,
+  onPlanBlocked,
+}) {
   const [activeDay, setActiveDay] = useState('lun')
 
   const classes = classesByDay?.[activeDay] || []
+
+  const handleReserve = (cls) => {
+    if (planCode && !isClassIncluded(planCode, activeDay, cls.time)) {
+      onPlanBlocked?.(cls)
+      return
+    }
+    onReserve(cls)
+  }
 
   return (
     <section id="horarios" className="relative bg-surface py-20 sm:py-24">
@@ -110,6 +126,7 @@ export default function Schedules({ classesByDay, onReserve, onViewBookings, boo
                 {classes.map((cls) => {
                   const available = cls.capacity - cls.booked
                   const full = available <= 0
+                  const notIncluded = Boolean(planCode) && !isClassIncluded(planCode, activeDay, cls.time)
                   return (
                     <tr
                       key={cls.id}
@@ -144,18 +161,30 @@ export default function Schedules({ classesByDay, onReserve, onViewBookings, boo
                         </div>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <button
-                          type="button"
-                          disabled={full}
-                          onClick={() => onReserve(cls)}
-                          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
-                            full
-                              ? 'cursor-not-allowed border border-line text-muted'
-                              : 'btn-sheen bg-accent text-white hover:bg-accent-hover'
-                          }`}
-                        >
-                          {full ? 'Completa' : 'Reservar'}
-                        </button>
+                        {notIncluded ? (
+                          <button
+                            type="button"
+                            onClick={() => handleReserve(cls)}
+                            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-muted"
+                            title="No incluido en tu plan"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                            No incluido en tu plan
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={full}
+                            onClick={() => handleReserve(cls)}
+                            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+                              full
+                                ? 'cursor-not-allowed border border-line text-muted'
+                                : 'btn-sheen bg-accent text-white hover:bg-accent-hover'
+                            }`}
+                          >
+                            {full ? 'Completa' : 'Reservar'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

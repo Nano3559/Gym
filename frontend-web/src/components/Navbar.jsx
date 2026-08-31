@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { Dumbbell, LogIn, LogOut, Menu, User, X } from 'lucide-react'
 import { brand, navLinks } from '../data/gymData'
 
-export default function Navbar({ onInscribirme, onVerPlanes, user, onLogin, onLogout }) {
+export default function Navbar({
+  onInscribirme,
+  onVerPlanes,
+  user,
+  onLogin,
+  onLogout,
+  hasActiveMembership = false,
+}) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -102,7 +109,7 @@ export default function Navbar({ onInscribirme, onVerPlanes, user, onLogin, onLo
             onClick={onVerPlanes}
             className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
           >
-            Ver planes
+            {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
           </button>
         </div>
 
@@ -186,7 +193,7 @@ export default function Navbar({ onInscribirme, onVerPlanes, user, onLogin, onLo
               }}
               className="rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white"
             >
-              Ver planes
+              {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
             </button>
           </div>
         </div>

@@ -19,6 +19,8 @@ import Toast from './components/Toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import useClasses from './hooks/useClasses'
 import useBookings from './hooks/useBookings'
+import useMembership from './hooks/useMembership'
+import { plans } from './data/gymData'
 
 function AppContent() {
   const { user: authUser, profile, signOut, reloadProfile } = useAuth()
@@ -63,6 +65,23 @@ function AppContent() {
   // Módulo 2: reservas reales del usuario (Supabase) + locales (fallback/servicios).
   const { bookings: dbBookings, createBooking, cancelBooking } = useBookings(authUser?.id)
   const bookings = useMemo(() => [...dbBookings, ...localBookings], [dbBookings, localBookings])
+
+  // Membresía activa del usuario para planes y acceso a clases.
+  const { membership, refresh: refreshMembership } = useMembership(authUser?.id)
+
+  const activePlan = useMemo(() => {
+    if (!membership?.plans?.codigo) return null
+    const plan = plans.find((p) => p.id === membership.plans.codigo)
+    const expiry = new Date(membership.fecha_vencimiento)
+    // oxlint-disable-next-line react/purity -- fecha de vencimiento calculada al renderizar
+    const daysRemaining = Math.max(0, Math.ceil((expiry - Date.now()) / (1000 * 60 * 60 * 24)))
+    return {
+      code: membership.plans.codigo,
+      name: membership.plans.nombre,
+      daysRemaining,
+      features: plan?.features || [],
+    }
+  }, [membership])
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type })
@@ -134,8 +153,16 @@ function AppContent() {
     setPaymentModalOpen(false)
     setPaymentPlan(null)
     reloadProfile()
+    refreshMembership()
     showToast('Membresía activada correctamente.')
-  }, [reloadProfile, showToast])
+  }, [reloadProfile, refreshMembership, showToast])
+
+  const handlePlanBlocked = useCallback(() => {
+    showToast(
+      'Tu plan actual no incluye clases en este horario. Actualiza tu plan para reservar.',
+      'error'
+    )
+  }, [showToast])
 
   const handleRegisterSuccess = useCallback(
     (user) => {
@@ -282,6 +309,7 @@ function AppContent() {
         user={currentUser}
         onLogin={() => setLoginOpen(true)}
         onLogout={handleLogout}
+        hasActiveMembership={Boolean(activePlan)}
       />
 
       <main>
@@ -289,13 +317,15 @@ function AppContent() {
         <Marquee />
         <About />
         <Services onBookService={handleReserve} />
-        <Plans onSelectPlan={handleSelectPlan} />
+        <Plans onSelectPlan={handleSelectPlan} activePlan={activePlan} />
         <Trainers />
         <Schedules
           classesByDay={classesByDay}
           onReserve={handleReserve}
           onViewBookings={handleViewBookings}
           bookingsCount={bookings.filter((b) => b.status === 'Confirmada').length}
+          planCode={activePlan?.code}
+          onPlanBlocked={handlePlanBlocked}
         />
         <Gallery />
         <Contact onSend={handleSendMessage} />
