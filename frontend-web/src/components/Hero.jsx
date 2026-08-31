@@ -1,7 +1,7 @@
 import { ArrowRight, Play, Star, Users, CalendarCheck } from 'lucide-react'
 import { brand, heroImage } from '../data/gymData'
 
-export default function Hero({ onInscribirme, onVerPlanes }) {
+export default function Hero({ onInscribirme, onVerPlanes, isAuthenticated }) {
   return (
     <section id="inicio" className="relative min-h-[100svh] overflow-hidden">
       <div className="absolute inset-0">
@@ -34,22 +34,26 @@ export default function Hero({ onInscribirme, onVerPlanes }) {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={onInscribirme}
-              className="btn-sheen group inline-flex items-center gap-2 rounded-xl bg-accent px-7 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-xl shadow-accent/30 transition hover:bg-accent-hover"
-            >
-              Inscribirme
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-            </button>
-            <button
-              type="button"
-              onClick={onVerPlanes}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-7 py-4 text-sm font-bold uppercase tracking-wide text-white backdrop-blur transition hover:border-white/50"
-            >
-              <Play className="h-4 w-4 fill-current" />
-              Ver planes
-            </button>
+            {!isAuthenticated && (
+              <>
+                <button
+                  type="button"
+                  onClick={onInscribirme}
+                  className="btn-sheen group inline-flex items-center gap-2 rounded-xl bg-accent px-7 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-xl shadow-accent/30 transition hover:bg-accent-hover"
+                >
+                  Inscribirme
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onVerPlanes}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-7 py-4 text-sm font-bold uppercase tracking-wide text-white backdrop-blur transition hover:border-white/50"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Ver planes
+                </button>
+              </>
+            )}
           </div>
 
           <div className="mt-14 grid max-w-lg grid-cols-3 gap-4">

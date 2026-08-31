@@ -313,7 +313,11 @@ function AppContent() {
       />
 
       <main>
-        <Hero onInscribirme={handleInscribirme} onVerPlanes={handleVerPlanes} />
+        <Hero
+          onInscribirme={handleInscribirme}
+          onVerPlanes={handleVerPlanes}
+          isAuthenticated={Boolean(currentUser)}
+        />
         <Marquee />
         <About />
         <Services onBookService={handleReserve} />
