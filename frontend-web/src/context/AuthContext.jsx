@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from '../lib/adminAccess'
 
 const AuthContext = createContext(null)
 
@@ -76,6 +77,19 @@ export function AuthProvider({ children }) {
         role: 'reception',
       })
       return { ok: true, demo: true }
+    }
+
+    if (
+      String(email).trim().toLowerCase() === ADMIN_EMAIL &&
+      String(password) === ADMIN_PASSWORD
+    ) {
+      setUser({
+        id: 'admin-demo-id',
+        email: ADMIN_EMAIL,
+        user_metadata: { full_name: 'Administración IronForge' },
+        role: 'admin',
+      })
+      return { ok: true, demo: true, role: 'admin' }
     }
 
     if (!isSupabaseConfigured || !supabase) {

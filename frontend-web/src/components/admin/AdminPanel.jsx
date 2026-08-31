@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, Dumbbell, Users, X } from 'lucide-react'
+import { ClipboardCheck, Dumbbell, LayoutDashboard, Users, X } from 'lucide-react'
 import useAdminClients from '../../hooks/useAdminClients'
 import AttendanceControl from './AttendanceControl'
 import ClientsManagement from './ClientsManagement'
+import AdminDashboard from './AdminDashboard'
 
 export default function AdminPanel({ open, onClose, onToast }) {
-  const [tab, setTab] = useState('attendance')
+  const [tab, setTab] = useState('dashboard')
   const admin = useAdminClients()
 
   useEffect(() => {
@@ -59,6 +60,18 @@ export default function AdminPanel({ open, onClose, onToast }) {
           <nav className="flex gap-2" aria-label="Secciones del panel">
             <button
               type="button"
+              onClick={() => setTab('dashboard')}
+              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                tab === 'dashboard'
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-line text-muted hover:text-white'
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </button>
+            <button
+              type="button"
               onClick={() => setTab('attendance')}
               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                 tab === 'attendance'
@@ -86,7 +99,9 @@ export default function AdminPanel({ open, onClose, onToast }) {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {tab === 'attendance' ? (
+        {tab === 'dashboard' ? (
+          <AdminDashboard />
+        ) : tab === 'attendance' ? (
           <AttendanceControl
             clients={admin.clients}
             attendance={admin.attendance}

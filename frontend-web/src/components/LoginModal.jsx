@@ -109,10 +109,16 @@ export default function LoginModal({ open, onClose, onGoRegister, onSuccess }) {
         </p>
 
         <div className="rounded-xl border border-line bg-card-2 px-4 py-3 text-xs text-muted">
-          <p className="font-semibold uppercase tracking-wide text-muted">Cuenta de prueba</p>
+          <p className="font-semibold uppercase tracking-wide text-muted">Cuentas de prueba</p>
           <p className="mt-1">
             Cuenta Recepción demo:{' '}
             <span className="font-mono text-white">recepcion@ironforge.com</span>{' '}
+            <span className="text-muted">/</span>{' '}
+            <span className="font-mono text-white">123456</span>
+          </p>
+          <p className="mt-1">
+            Cuenta Admin demo:{' '}
+            <span className="font-mono text-white">admin@ironforge.com</span>{' '}
             <span className="text-muted">/</span>{' '}
             <span className="font-mono text-white">123456</span>
           </p>

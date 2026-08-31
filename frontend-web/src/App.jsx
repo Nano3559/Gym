@@ -23,6 +23,7 @@ import useBookings from './hooks/useBookings'
 import useMembership from './hooks/useMembership'
 import { plans } from './data/gymData'
 import { isReceptionUser } from './lib/receptionAccess'
+import { isAdminUser } from './lib/adminAccess'
 
 function AppContent() {
   const { user: authUser, profile, signOut, reloadProfile } = useAuth()
@@ -343,7 +344,9 @@ function AppContent() {
         onLogout={handleLogout}
         hasActiveMembership={Boolean(activePlan)}
         isReceptionUser={isReceptionUser(currentUser)}
+        isAdminUser={isAdminUser(currentUser)}
         onOpenReception={() => setAdminOpen(true)}
+        onOpenAdmin={() => setAdminOpen(true)}
       />
 
       <main>

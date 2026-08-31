@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, Dumbbell, LogIn, LogOut, Menu, User, X } from 'lucide-react'
+import { ClipboardCheck, Dumbbell, LayoutDashboard, LogIn, LogOut, Menu, User, X } from 'lucide-react'
 import { brand, navLinks } from '../data/gymData'
 
 export default function Navbar({
@@ -10,7 +10,9 @@ export default function Navbar({
   onLogout,
   hasActiveMembership = false,
   isReceptionUser = false,
+  isAdminUser = false,
   onOpenReception,
+  onOpenAdmin,
 }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
@@ -72,11 +74,21 @@ export default function Navbar({
         </ul>
 
         <div className="hidden items-center gap-3 lg:flex">
+          {isAdminUser && (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-volt px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink transition hover:brightness-95"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Panel Admin
+            </button>
+          )}
           {isReceptionUser && (
             <button
               type="button"
               onClick={onOpenReception}
-              className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-volt px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink transition hover:brightness-95"
+              className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
             >
               <ClipboardCheck className="h-4 w-4" />
               Panel Recepción
@@ -154,6 +166,19 @@ export default function Navbar({
             ))}
           </ul>
           <div className="mt-4 flex flex-col gap-3">
+            {isAdminUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  onOpenAdmin()
+                }}
+                className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-volt px-5 py-3 text-sm font-bold uppercase tracking-wide text-ink"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Panel Admin
+              </button>
+            )}
             {isReceptionUser && (
               <button
                 type="button"
@@ -161,7 +186,7 @@ export default function Navbar({
                   setOpen(false)
                   onOpenReception()
                 }}
-                className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-volt px-5 py-3 text-sm font-bold uppercase tracking-wide text-ink"
+                className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white"
               >
                 <ClipboardCheck className="h-4 w-4" />
                 Panel Recepción
