@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Dumbbell, LogIn, LogOut, Menu, User, X } from 'lucide-react'
+import { ClipboardCheck, Dumbbell, LogIn, LogOut, Menu, User, X } from 'lucide-react'
 import { brand, navLinks } from '../data/gymData'
 
 export default function Navbar({
@@ -9,6 +9,8 @@ export default function Navbar({
   onLogin,
   onLogout,
   hasActiveMembership = false,
+  isReceptionUser = false,
+  onOpenReception,
 }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
@@ -70,6 +72,16 @@ export default function Navbar({
         </ul>
 
         <div className="hidden items-center gap-3 lg:flex">
+          {isReceptionUser && (
+            <button
+              type="button"
+              onClick={onOpenReception}
+              className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-volt px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-ink transition hover:brightness-95"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Panel Recepción
+            </button>
+          )}
           {user ? (
             <>
               <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-white">
@@ -142,6 +154,19 @@ export default function Navbar({
             ))}
           </ul>
           <div className="mt-4 flex flex-col gap-3">
+            {isReceptionUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  onOpenReception()
+                }}
+                className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-volt px-5 py-3 text-sm font-bold uppercase tracking-wide text-ink"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Panel Recepción
+              </button>
+            )}
             {user ? (
               <>
                 <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-5 py-3 text-sm font-semibold text-white">

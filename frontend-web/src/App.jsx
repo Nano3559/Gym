@@ -17,12 +17,12 @@ import PaymentModal from './components/PaymentModal'
 import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
 import AdminPanel from './components/admin/AdminPanel'
-import { ClipboardCheck } from 'lucide-react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import useClasses from './hooks/useClasses'
 import useBookings from './hooks/useBookings'
 import useMembership from './hooks/useMembership'
 import { plans } from './data/gymData'
+import { isReceptionUser } from './lib/receptionAccess'
 
 function AppContent() {
   const { user: authUser, profile, signOut, reloadProfile } = useAuth()
@@ -342,6 +342,8 @@ function AppContent() {
         onLogin={() => setLoginOpen(true)}
         onLogout={handleLogout}
         hasActiveMembership={Boolean(activePlan)}
+        isReceptionUser={isReceptionUser(currentUser)}
+        onOpenReception={() => setAdminOpen(true)}
       />
 
       <main>
@@ -421,16 +423,7 @@ function AppContent() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {/* Módulo 6: acceso rápido al panel de recepción */}
-      <button
-        type="button"
-        onClick={() => setAdminOpen(true)}
-        className="fixed bottom-6 left-6 z-40 inline-flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-3 text-sm font-semibold text-white shadow-2xl transition hover:border-accent hover:text-accent"
-      >
-        <ClipboardCheck className="h-4 w-4 text-accent" />
-        Recepción
-      </button>
-
+      {/* Módulo 6: panel de recepción (solo visible para la cuenta autorizada). */}
       <AdminPanel open={isAdminOpen} onClose={() => setAdminOpen(false)} onToast={showToast} />
     </div>
   )
