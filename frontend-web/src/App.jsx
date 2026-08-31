@@ -193,6 +193,29 @@ function AppContent() {
     showToast('Sesión cerrada correctamente.')
   }, [signOut, showToast])
 
+  // Devuelve false y muestra un aviso si la clase no puede reservarse por
+  // límite diario (máx. 5) o por coincidencia de horario (misma fecha y hora).
+  const validateReserve = useCallback(
+    (item) => {
+      if (!item.date) return true
+      const active = bookings.filter((b) => b.status === 'Confirmada')
+      const sameDay = active.filter((b) => b.date === item.date)
+
+      if (sameDay.length >= 5) {
+        showToast('Has alcanzado el límite máximo de 5 clases grupales para este día.', 'error')
+        return false
+      }
+
+      if (sameDay.some((b) => b.time === item.time)) {
+        showToast('Ya tienes una clase reservada en este mismo horario.', 'error')
+        return false
+      }
+
+      return true
+    },
+    [bookings, showToast]
+  )
+
   const handleReserve = useCallback((item) => {
     if (item.schedule) {
       const timeMatch = item.schedule.match(/(\d{2}:\d{2})/)
@@ -207,8 +230,12 @@ function AppContent() {
       })
       return
     }
+
+    // Validaciones de límite diario y cruce de horarios antes de reservar.
+    if (!validateReserve(item)) return
+
     setBookingClass(item)
-  }, [])
+  }, [validateReserve])
 
   const handleGoRegister = useCallback(() => {
     setPendingBooking(bookingClass)

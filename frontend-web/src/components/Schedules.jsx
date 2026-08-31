@@ -7,6 +7,7 @@ import {
   History,
   Lock,
   Moon,
+  Info,
 } from 'lucide-react'
 import { scheduleDays } from '../data/gymData'
 import { isClassIncluded } from '../lib/planAccess'
@@ -181,6 +182,14 @@ export default function Schedules({
               </span>
             )}
           </button>
+        </div>
+
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-muted">
+          <Info className="h-4 w-4 shrink-0 text-accent" />
+          <span>
+            Nota: Puedes reservar un máximo de <strong className="font-semibold text-white">5 clases
+            grupales por día</strong>.
+          </span>
         </div>
 
         {/* ------- Vista escritorio: matriz semanal de 7 columnas ------- */}
