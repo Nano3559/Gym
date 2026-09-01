@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { seedClients, seedAttendance, todayISO, PLAN_NAMES } from '../data/adminData'
+import { getRegisteredClients, toClientShape } from '../lib/registeredClients'
 
 function fmtHora(d = new Date()) {
   return d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })
@@ -75,13 +76,24 @@ export default function useAdminClients() {
         }
       })
 
-      // 3) Fusiona los usuarios reales al inicio, combinándolos con los datos
-      //    estáticos de prueba (sin duplicar).
-      if (reales.length) {
-        const realIds = new Set(reales.map((c) => c.id))
-        const restantes = seedClients.filter((c) => !realIds.has(c.id))
-        setClients([...reales, ...restantes])
+      // 3) Lectura híbrida: combina 3 fuentes sin duplicar por email o CI.
+      //    - Clientes registrados localmente (localStorage)
+      //    - Usuarios reales de Supabase (profiles + memberships)
+      //    - Semilla de clientes de prueba (seedClients)
+      //    Los clientes de localStorage y Supabase se colocan al inicio.
+      const locales = getRegisteredClients().map(toClientShape)
+      const unificados = [...locales, ...reales, ...seedClients]
+      const vistos = new Set()
+      const sinDuplicar = []
+      for (const c of unificados) {
+        const email = String(c.email || c.correo || '').trim().toLowerCase()
+        const ci = String(c.ci || '').trim()
+        const clave = email || ci || c.id
+        if (!clave || vistos.has(clave)) continue
+        vistos.add(clave)
+        sinDuplicar.push(c)
       }
+      setClients(sinDuplicar)
     } catch {
       // Fallback: se conservan los datos de la semilla local.
     } finally {

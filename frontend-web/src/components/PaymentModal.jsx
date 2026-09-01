@@ -19,6 +19,7 @@ import {
   crearRegistroPagoPendiente,
   confirmarPagoExitoso,
 } from '../services/paymentService'
+import { registeredClientFromUser, saveRegisteredClient } from '../lib/registeredClients'
 
 const METODOS = [
   { key: 'qr', label: 'QR', icon: QrCode },
@@ -248,6 +249,7 @@ export default function PaymentModal({ isOpen, onClose, plan, user, onSuccess })
     })
     if (ok) {
       mvi.paymentCompleted(membership)
+      saveRegisteredClient(registeredClientFromUser(user, plan))
     } else {
       mvi.setError(message)
     }
