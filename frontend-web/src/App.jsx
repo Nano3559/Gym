@@ -358,7 +358,7 @@ function AppContent() {
         />
         <Marquee />
         <About />
-        <Services onBookService={handleReserve} />
+        <Services onBookService={handleReserve} user={currentUser} />
         <Plans onSelectPlan={handleSelectPlan} activePlan={activePlan} user={currentUser} />
         <Trainers />
         <Schedules
@@ -368,6 +368,7 @@ function AppContent() {
           bookingsCount={bookings.filter((b) => b.status === 'Confirmada').length}
           planCode={activePlan?.code}
           onPlanBlocked={handlePlanBlocked}
+          user={currentUser}
         />
         <Gallery />
         <Contact onSend={handleSendMessage} />

@@ -16,6 +16,9 @@ export default function Navbar({
 }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const isStaff = isAdminUser || isReceptionUser
+  const staffLabel = isAdminUser ? 'Admin' : 'Recepción'
+  const displayName = isStaff ? staffLabel : user?.nombre || 'Cliente'
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -98,7 +101,7 @@ export default function Navbar({
             <>
               <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-white">
                 <User className="h-4 w-4 text-accent" />
-                Hola, {user.nombre}
+                Hola, {displayName}
               </span>
               <button
                 type="button"
@@ -128,13 +131,15 @@ export default function Navbar({
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={onVerPlanes}
-            className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
-          >
-            {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
-          </button>
+          {!isStaff && (
+            <button
+              type="button"
+              onClick={onVerPlanes}
+              className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
+            >
+              {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
+            </button>
+          )}
         </div>
 
         <button
@@ -196,7 +201,7 @@ export default function Navbar({
               <>
                 <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-card px-5 py-3 text-sm font-semibold text-white">
                   <User className="h-4 w-4 text-accent" />
-                  Hola, {user.nombre}
+                  Hola, {displayName}
                 </span>
                 <button
                   type="button"
@@ -235,16 +240,18 @@ export default function Navbar({
                 </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                onVerPlanes()
-              }}
-              className="rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white"
-            >
-              {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
-            </button>
+            {!isStaff && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  onVerPlanes()
+                }}
+                className="rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white"
+              >
+                {hasActiveMembership ? 'Ver mi plan' : 'Ver planes'}
+              </button>
+            )}
           </div>
         </div>
       )}

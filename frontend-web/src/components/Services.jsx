@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Clock3, ArrowRight, CalendarCheck } from 'lucide-react'
 import { services } from '../data/gymData'
 import Modal from './ui/Modal'
+import { isAdminUser } from '../lib/adminAccess'
+import { isReceptionUser } from '../lib/receptionAccess'
 
-function ServiceModal({ service, onClose, onBook }) {
+function ServiceModal({ service, onClose, onBook, isStaff }) {
   if (!service) return null
   return (
     <Modal open={!!service} onClose={onClose} title={service.name}>
@@ -24,20 +26,27 @@ function ServiceModal({ service, onClose, onBook }) {
         <span className="text-white">{service.schedule}</span>
       </div>
 
-      <button
-        type="button"
-        onClick={onBook}
-        className="btn-sheen mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
-      >
-        <CalendarCheck className="h-4 w-4" />
-        Reservar esta clase
-      </button>
+      {isStaff ? (
+        <div className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-card-2 px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-muted">
+          Vista consulta
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onBook}
+          className="btn-sheen mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+        >
+          <CalendarCheck className="h-4 w-4" />
+          Reservar esta clase
+        </button>
+      )}
     </Modal>
   )
 }
 
-export default function Services({ onBookService }) {
+export default function Services({ onBookService, user }) {
   const [active, setActive] = useState(null)
+  const isStaff = isAdminUser(user) || isReceptionUser(user)
 
   return (
     <section id="servicios" className="bg-ink py-20 sm:py-24">
@@ -102,6 +111,7 @@ export default function Services({ onBookService }) {
 
       <ServiceModal
         service={active}
+        isStaff={isStaff}
         onClose={() => setActive(null)}
         onBook={() => {
           onBookService(active)

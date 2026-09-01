@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import { scheduleDays } from '../data/gymData'
 import { isClassIncluded } from '../lib/planAccess'
+import { isAdminUser } from '../lib/adminAccess'
+import { isReceptionUser } from '../lib/receptionAccess'
 
 const DAY_ABBR = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']
 const MONTH_ABBR = [
@@ -36,7 +38,7 @@ function CapacityBar({ available, capacity }) {
   )
 }
 
-function ClassCard({ cls, dayId, planCode, onReserve, onPlanBlocked }) {
+function ClassCard({ cls, dayId, planCode, onReserve, onPlanBlocked, isStaff }) {
   const available = cls.capacity - cls.booked
   const full = available <= 0
   const notIncluded = Boolean(planCode) && !isClassIncluded(planCode, dayId, cls.time)
@@ -69,7 +71,11 @@ function ClassCard({ cls, dayId, planCode, onReserve, onPlanBlocked }) {
       </div>
 
       <div className="mt-3">
-        {notIncluded ? (
+        {isStaff ? (
+          <div className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-card-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            Vista consulta
+          </div>
+        ) : notIncluded ? (
           <button
             type="button"
             onClick={handleClick}
@@ -113,8 +119,10 @@ export default function Schedules({
   bookingsCount,
   planCode,
   onPlanBlocked,
+  user,
 }) {
   const [activeDay, setActiveDay] = useState('lun')
+  const isStaff = isAdminUser(user) || isReceptionUser(user)
 
   // Fechas exactas de la semana actual (Lunes a Domingo) calculadas automáticamente.
   const week = useMemo(() => {
@@ -169,19 +177,21 @@ export default function Schedules({
               horarios se actualizan automáticamente al confirmar.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onViewBookings}
-            className="inline-flex items-center gap-2 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
-          >
-            <History className="h-4 w-4" />
-            Mis reservas
-            {bookingsCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-white">
-                {bookingsCount}
-              </span>
-            )}
-          </button>
+          {!isStaff && (
+            <button
+              type="button"
+              onClick={onViewBookings}
+              className="inline-flex items-center gap-2 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-white transition hover:border-accent hover:text-accent"
+            >
+              <History className="h-4 w-4" />
+              Mis reservas
+              {bookingsCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-white">
+                  {bookingsCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-muted">
@@ -236,6 +246,7 @@ export default function Schedules({
                                   cls={cls}
                                   dayId={day.id}
                                   planCode={planCode}
+                                  isStaff={isStaff}
                                   onReserve={onReserve}
                                   onPlanBlocked={onPlanBlocked}
                                 />
@@ -314,6 +325,7 @@ export default function Schedules({
                           cls={cls}
                           dayId={activeDay}
                           planCode={planCode}
+                          isStaff={isStaff}
                           onReserve={onReserve}
                           onPlanBlocked={onPlanBlocked}
                         />
