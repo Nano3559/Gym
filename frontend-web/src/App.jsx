@@ -359,7 +359,7 @@ function AppContent() {
         <Marquee />
         <About />
         <Services onBookService={handleReserve} />
-        <Plans onSelectPlan={handleSelectPlan} activePlan={activePlan} />
+        <Plans onSelectPlan={handleSelectPlan} activePlan={activePlan} user={currentUser} />
         <Trainers />
         <Schedules
           classesByDay={classesByDay}

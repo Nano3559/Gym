@@ -1,10 +1,18 @@
 import { useState } from 'react'
 import { BadgeCheck, CalendarClock, Check, Zap } from 'lucide-react'
 import { usePlans } from '../context/PlansContext'
+import { isAdminUser } from '../lib/adminAccess'
+import { isReceptionUser } from '../lib/receptionAccess'
+import { getPlanFeatures } from '../lib/planFeatures'
 
-export default function Plans({ onSelectPlan, activePlan }) {
+export default function Plans({ onSelectPlan, activePlan, user }) {
   const [showAll, setShowAll] = useState(false)
   const { activePlans: plans } = usePlans()
+  const isStaff = isAdminUser(user) || isReceptionUser(user)
+  const activeFeatures = getPlanFeatures({
+    id: activePlan?.code,
+    features: activePlan?.features,
+  })
 
   return (
     <section id="planes" className="relative bg-surface py-20 sm:py-24">
@@ -49,7 +57,7 @@ export default function Plans({ onSelectPlan, activePlan }) {
             </div>
 
             <ul className="relative mt-8 grid gap-3 border-t border-line pt-8 sm:grid-cols-2">
-              {(activePlan.features || []).map((feature) => (
+              {activeFeatures.map((feature) => (
                 <li key={feature} className="flex items-start gap-3 text-sm">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
                     <Check className="h-3 w-3" strokeWidth={3} />
@@ -103,7 +111,7 @@ export default function Plans({ onSelectPlan, activePlan }) {
               </div>
 
               <ul className="mt-7 flex-1 space-y-3.5 border-t border-line pt-7">
-                {plan.features.map((feature) => (
+                {getPlanFeatures(plan).map((feature) => (
                   <li key={feature} className="flex items-start gap-3 text-sm">
                     <span
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
@@ -119,17 +127,23 @@ export default function Plans({ onSelectPlan, activePlan }) {
                 ))}
               </ul>
 
-              <button
-                type="button"
-                onClick={() => onSelectPlan(plan)}
-                className={`mt-8 w-full rounded-xl px-6 py-3.5 text-sm font-bold uppercase tracking-wide transition ${
-                  plan.highlighted
-                    ? 'btn-sheen bg-accent text-white hover:bg-accent-hover'
-                    : 'border border-line text-white hover:border-accent hover:bg-accent/10 hover:text-accent'
-                }`}
-              >
-                {plan.cta}
-              </button>
+              {isStaff ? (
+                <div className="mt-8 w-full rounded-xl border border-line bg-card-2 px-6 py-3.5 text-center text-sm font-bold uppercase tracking-wide text-muted">
+                  Plan Disponible
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSelectPlan(plan)}
+                  className={`mt-8 w-full rounded-xl px-6 py-3.5 text-sm font-bold uppercase tracking-wide transition ${
+                    plan.highlighted
+                      ? 'btn-sheen bg-accent text-white hover:bg-accent-hover'
+                      : 'border border-line text-white hover:border-accent hover:bg-accent/10 hover:text-accent'
+                  }`}
+                >
+                  {plan.cta}
+                </button>
+              )}
             </article>
           ))}
         </div>
