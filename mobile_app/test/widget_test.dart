@@ -1,5 +1,4 @@
 // Test básico de que la app arranca correctamente.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile_app/main.dart';

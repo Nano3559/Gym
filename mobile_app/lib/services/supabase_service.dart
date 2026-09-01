@@ -1,13 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/plan.dart';
 import '../models/gym_class.dart';
+import '../models/booking.dart';
 
-/// Capa de acceso a datos, SOLO LECTURA por ahora.
-///
-/// Importante: esta parte (Módulo 8, punto 1) es responsabilidad visual.
-/// La lógica de escritura real (login, crear reservas, sincronizar, etc.)
-/// la conecta el Integrante 2 más adelante. No dupliques esa lógica aquí,
-/// solo consultamos datos para poder mostrarlos en pantalla.
 class SupabaseService {
   static final SupabaseClient _client = Supabase.instance.client;
 
@@ -38,6 +33,64 @@ class SupabaseService {
     return (data as List)
         .map((e) => GymClass.fromMap(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Realiza la reserva de una clase invocando la función RPC `reservar_clase`
+  static Future<Map<String, dynamic>> reservarClase(String classId) async {
+    try {
+      final res = await _client.rpc(
+        'reservar_clase',
+        params: {'p_class_id': classId},
+      );
+      return {'ok': true, 'data': res, 'message': 'Reserva realizada correctamente.'};
+    } on PostgrestException catch (e) {
+      return {'ok': false, 'message': e.message};
+    } catch (e) {
+      return {'ok': false, 'message': 'Error inesperado al realizar la reserva: $e'};
+    }
+  }
+
+  /// Trae las reservas del usuario actual junto con los datos de cada clase
+  static Future<List<Booking>> getMisReservas() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _client
+          .from('bookings')
+          .select('id, user_id, class_id, estado, created_at, classes(nombre, fecha, hora_inicio, entrenador)')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      return (data as List).map((item) {
+        final map = item as Map<String, dynamic>;
+        return Booking.fromMap({
+          'id': map['id'],
+          'user_id': map['user_id'],
+          'class_id': map['class_id'],
+          'status': map['estado'] ?? 'Confirmada',
+          'created_at': map['created_at'],
+          'classes': map['classes'],
+        });
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Cancela una reserva existente
+  static Future<Map<String, dynamic>> cancelarReserva(String bookingId) async {
+    try {
+      await _client
+          .from('bookings')
+          .update({'estado': 'cancelada'})
+          .eq('id', bookingId);
+      return {'ok': true, 'message': 'Reserva cancelada correctamente.'};
+    } on PostgrestException catch (e) {
+      return {'ok': false, 'message': e.message};
+    } catch (e) {
+      return {'ok': false, 'message': 'No se pudo cancelar la reserva: $e'};
+    }
   }
 
   static String _formatFecha(DateTime fecha) {
