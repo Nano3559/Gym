@@ -6,6 +6,10 @@ import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/plans_screen.dart';
 import 'screens/schedule_screen.dart';
+import 'screens/qr_pass_screen.dart';
+import 'screens/qr_scanner_screen.dart';
+import 'services/auth_service.dart';
+import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,12 +55,34 @@ class _RootShellState extends State<RootShell> {
     setState(() => _indiceActual = index);
   }
 
+  Future<void> _abrirPaseQR() async {
+    // Si no está autenticado, redirige a login
+    if (!AuthService.isAuthenticated) {
+      final loggedIn = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (loggedIn != true) return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QrPassScreen()),
+    );
+  }
+
+  void _abrirScanner() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pantallas = [
       HomeScreen(
         onVerPlanes: () => _irA(1),
         onVerHorarios: () => _irA(2),
+        onVerPaseQR: _abrirPaseQR,
+        onVerScanner: _abrirScanner,
       ),
       const PlansScreen(),
       const ScheduleScreen(),

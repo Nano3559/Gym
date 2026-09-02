@@ -93,6 +93,118 @@ class SupabaseService {
     }
   }
 
+  /// Verifica si el usuario actual tiene rol de administrador.
+  /// Consulta el campo `rol` en la tabla `profiles`.
+  static Future<bool> esAdmin() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return false;
+    try {
+      final data = await _client
+          .from('profiles')
+          .select('rol')
+          .eq('id', user.id)
+          .maybeSingle();
+      return data != null && data['rol'] == 'admin';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Valida si un socio tiene membresía activa. Usado por el escáner del admin.
+  /// Recibe el [uid] (UUID del usuario en Supabase Auth) leído del QR.
+  /// Retorna:
+  ///   - ok: true si el acceso está permitido
+  ///   - nombre, plan, vence: datos del socio para mostrar en pantalla
+  ///   - message: descripción del resultado o motivo de denegación
+  static Future<Map<String, dynamic>> validarQr(String uid) async {
+    try {
+      // 1. Obtener datos del perfil
+      final profileData = await _client
+          .from('profiles')
+          .select('nombre, apellido')
+          .eq('id', uid)
+          .maybeSingle();
+
+      if (profileData == null) {
+        return {
+          'ok': false,
+          'nombre': 'Desconocido',
+          'message': 'El socio no existe en el sistema.',
+        };
+      }
+
+      final nombre =
+          '${profileData['nombre'] ?? ''} ${profileData['apellido'] ?? ''}'.trim();
+
+      // 2. Verificar membresía activa
+      final memData = await _client
+          .from('memberships')
+          .select('estado, fecha_vencimiento, plans(nombre)')
+          .eq('user_id', uid)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (memData == null) {
+        return {
+          'ok': false,
+          'nombre': nombre,
+          'plan': 'Sin plan',
+          'vence': '—',
+          'message': 'El socio no tiene ninguna membresía registrada.',
+        };
+      }
+
+      final estado = memData['estado'] as String? ?? '';
+      final fechaVenStr = memData['fecha_vencimiento'] as String?;
+      final planNombre =
+          (memData['plans'] as Map<String, dynamic>?)?['nombre'] as String? ??
+              '—';
+
+      DateTime? fechaVencimiento;
+      if (fechaVenStr != null) {
+        fechaVencimiento = DateTime.tryParse(fechaVenStr);
+      }
+
+      final ahora = DateTime.now();
+      final vigente =
+          fechaVencimiento != null && fechaVencimiento.isAfter(ahora);
+      final estadoOk = estado == 'activa' || estado == 'por_vencer';
+
+      final venceStr = fechaVencimiento != null
+          ? '${fechaVencimiento.day}/${fechaVencimiento.month}/${fechaVencimiento.year}'
+          : '—';
+
+      if (!vigente || !estadoOk) {
+        return {
+          'ok': false,
+          'nombre': nombre,
+          'plan': planNombre,
+          'vence': venceStr,
+          'message': vigente
+              ? 'La membresía está suspendida o cancelada.'
+              : 'La membresía venció el $venceStr.',
+        };
+      }
+
+      return {
+        'ok': true,
+        'nombre': nombre,
+        'plan': planNombre,
+        'vence': venceStr,
+        'message': 'Acceso permitido.',
+      };
+    } on PostgrestException catch (e) {
+      return {'ok': false, 'nombre': '—', 'message': e.message};
+    } catch (e) {
+      return {
+        'ok': false,
+        'nombre': '—',
+        'message': 'Error al verificar acceso: $e',
+      };
+    }
+  }
+
   static String _formatFecha(DateTime fecha) {
     final mes = fecha.month.toString().padLeft(2, '0');
     final dia = fecha.day.toString().padLeft(2, '0');

@@ -6,17 +6,20 @@ import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'my_bookings_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onVerPlanes;
   final VoidCallback onVerHorarios;
   final VoidCallback? onVerPaseQR;
+  final VoidCallback? onVerScanner;
 
   const HomeScreen({
     super.key,
     required this.onVerPlanes,
     required this.onVerHorarios,
     this.onVerPaseQR,
+    this.onVerScanner,
   });
 
   @override
@@ -27,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   UserProfile? _profile;
   Booking? _nextBooking;
   bool _isLoading = true;
+  bool _isAdmin = false;
 
   @override
   void initState() {
@@ -40,7 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (AuthService.isAuthenticated) {
       final prof = await AuthService.getProfile();
       final bookings = await SupabaseService.getMisReservas();
-      
+      final adminCheck = await SupabaseService.esAdmin();
+
       final activeBookings = bookings.where((b) => b.isConfirmed).toList();
       activeBookings.sort((a, b) => a.classDate.compareTo(b.classDate));
 
@@ -48,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _profile = prof;
           _nextBooking = activeBookings.isNotEmpty ? activeBookings.first : null;
+          _isAdmin = adminCheck;
           _isLoading = false;
         });
       }
@@ -56,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _profile = null;
           _nextBooking = null;
+          _isAdmin = false;
           _isLoading = false;
         });
       }
@@ -358,14 +365,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _QuickAction(
                       icon: Icons.qr_code_2,
-                      label: 'Mi pase QR',
+                      label: _isAdmin ? 'Escanear QR' : 'Mi pase QR',
                       onTap: () {
-                        if (widget.onVerPaseQR != null) {
-                          widget.onVerPaseQR!();
+                        if (_isAdmin) {
+                          // Admin → abre el escáner
+                          if (widget.onVerScanner != null) {
+                            widget.onVerScanner!();
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const QrScannerScreen()),
+                            );
+                          }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Pase digital disponible en el siguiente módulo.')),
-                          );
+                          // Socio → abre su pase QR
+                          if (widget.onVerPaseQR != null) {
+                            widget.onVerPaseQR!();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Pase digital disponible en el siguiente módulo.')),
+                            );
+                          }
                         }
                       },
                     ),
