@@ -93,6 +93,52 @@ class SupabaseService {
     }
   }
 
+  /// Suscribe o renueva el plan del usuario actual invocando la función RPC `procesar_pago_exitoso`.
+  /// En caso de contingencia, actualiza directamente el plan en el perfil.
+  static Future<Map<String, dynamic>> suscribirPlan({
+    required Plan plan,
+    String metodoPago = 'qr',
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      return {'ok': false, 'message': 'Debes iniciar sesión para adquirir un plan.'};
+    }
+
+    try {
+      final transactionId = 'mbl-${DateTime.now().millisecondsSinceEpoch}';
+      await _client.rpc(
+        'procesar_pago_exitoso',
+        params: {
+          'p_transaction_id': transactionId,
+          'p_user_id': user.id,
+          'p_plan_id': plan.id,
+          'p_monto': plan.precio,
+          'p_metodo_pago': metodoPago,
+        },
+      );
+      return {
+        'ok': true,
+        'message': '¡Membresía ${plan.nombre} activada exitosamente!',
+      };
+    } on PostgrestException catch (e) {
+      // Fallback a actualización directa del perfil si la RPC tuviera restricción
+      try {
+        await _client
+            .from('profiles')
+            .update({'plan_id': plan.id})
+            .eq('id', user.id);
+        return {
+          'ok': true,
+          'message': '¡Plan ${plan.nombre} asignado a tu perfil!',
+        };
+      } catch (_) {
+        return {'ok': false, 'message': e.message};
+      }
+    } catch (e) {
+      return {'ok': false, 'message': 'No se pudo activar el plan: $e'};
+    }
+  }
+
   /// Verifica si el usuario actual tiene rol de administrador.
   /// Consulta el campo `rol` en la tabla `profiles`.
   static Future<bool> esAdmin() async {

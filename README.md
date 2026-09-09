@@ -10,7 +10,7 @@ Aplicación web completa para la gestión integral de un gimnasio y portal inter
 - **Base de Datos & Auth:** Supabase (PostgreSQL, Row Level Security, Realtime)
 - **Gestión de Estado & Iconos:** Lucide React / React Context API
 - **Despliegue Web:** Netlify
-- **Aplicación Móvil:** Android (PWA / APK)
+- **Aplicación Móvil:** Flutter (Dart) para Android / iOS
 
 ---
 
@@ -43,13 +43,42 @@ Aplicación web completa para la gestión integral de un gimnasio y portal inter
 
 ### 1. Requisitos Previos
 
-- Node.js (v18 o superior)
-- Cuenta activa en Supabase
+- **Node.js** (v18 o superior)
+- **Flutter SDK** (v3.13 o superior) y Android Studio / dispositivo
+- Cuenta activa en **Supabase**
 
-### 2. Clonar e Instalar
+### 2. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/rodrigsan/Gym.git
-cd Gym/frontend-web
+git clone https://github.com/Nano3559/Gym.git
+cd Gym
+```
+
+### 3. Ejecución del Frontend Web
+
+```bash
+cd frontend-web
 npm install
+
+# Configurar variables de entorno (copiar plantilla)
+cp .env.example .env
+# Editar .env con tus claves VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY
+
+# Iniciar servidor de desarrollo
+npm run dev
+```
+La aplicación web estará disponible en `http://localhost:5173`.
+
+### 4. Ejecución de la App Móvil (Flutter)
+
+```bash
+cd ../mobile_app
+flutter pub get
+
+# Configurar variables de entorno (copiar plantilla)
+cp .env.example .env
+# Editar .env con SUPABASE_URL y SUPABASE_ANON_KEY
+
+# Iniciar aplicación en emulador o dispositivo físico
+flutter run
 ```
