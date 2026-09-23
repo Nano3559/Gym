@@ -16,6 +16,7 @@ import MyBookingsModal from './components/MyBookingsModal'
 import PaymentModal from './components/PaymentModal'
 import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
+import VisionModal from './components/VisionModal'
 import AdminPanel from './components/admin/AdminPanel'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlansProvider, usePlans } from './context/PlansContext'
@@ -53,6 +54,7 @@ function AppContent() {
 
   const [extraBooked, setExtraBooked] = useState({})
   const [toast, setToast] = useState(null)
+  const [isVisionOpen, setVisionOpen] = useState(false)
 
   // Módulo 6: panel de recepción / administración.
   const [isAdminOpen, setAdminOpen] = useState(false)
@@ -354,6 +356,7 @@ function AppContent() {
         <Hero
           onInscribirme={handleInscribirme}
           onVerPlanes={handleVerPlanes}
+          onOpenVision={() => setVisionOpen(true)}
           isAuthenticated={Boolean(currentUser)}
         />
         <Marquee />
@@ -427,6 +430,8 @@ function AppContent() {
       />
 
       <Toast toast={toast} onClose={() => setToast(null)} />
+
+      <VisionModal open={isVisionOpen} onClose={() => setVisionOpen(false)} />
 
       {/* Módulo 6: panel de recepción (solo visible para la cuenta autorizada). */}
       <AdminPanel

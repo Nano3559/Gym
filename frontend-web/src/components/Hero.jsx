@@ -1,7 +1,7 @@
-import { ArrowRight, Play, Star, Users, CalendarCheck } from 'lucide-react'
+import { ArrowRight, Camera, Play, Star, Users, CalendarCheck } from 'lucide-react'
 import { brand, heroImage } from '../data/gymData'
 
-export default function Hero({ onInscribirme, onVerPlanes, isAuthenticated }) {
+export default function Hero({ onInscribirme, onVerPlanes, onOpenVision, isAuthenticated }) {
   return (
     <section id="inicio" className="relative min-h-[100svh] overflow-hidden">
       <div className="absolute inset-0">
@@ -34,6 +34,14 @@ export default function Hero({ onInscribirme, onVerPlanes, isAuthenticated }) {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={onOpenVision}
+              className="inline-flex items-center gap-2 rounded-xl border border-volt/50 bg-volt/10 px-6 py-4 text-sm font-bold uppercase tracking-wide text-volt transition hover:bg-volt/20"
+            >
+              <Camera className="h-4 w-4" />
+              Analizar mi comida
+            </button>
             {!isAuthenticated && (
               <>
                 <button
