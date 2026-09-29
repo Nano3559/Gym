@@ -155,3 +155,28 @@ body {
 input[type="checkbox"].toggle {
   display: none;
 }
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .cash-receipt,
+  .cash-receipt * {
+    visibility: visible !important;
+  }
+
+  .cash-receipt {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
+
+  .cash-receipt * {
+    color: #111 !important;
+  }
+}

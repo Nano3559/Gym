@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, Dumbbell, FileBarChart, LayoutDashboard, Settings2, Users, X } from 'lucide-react'
+import { Banknote, ClipboardCheck, Dumbbell, FileBarChart, LayoutDashboard, Settings2, ShoppingCart, Users, X } from 'lucide-react'
 import useAdminClients from '../../hooks/useAdminClients'
 import AttendanceControl from './AttendanceControl'
 import ClientsManagement from './ClientsManagement'
 import AdminDashboard from './AdminDashboard'
 import AdminReports from './AdminReports'
 import PlanManagement from './PlanManagement'
+import ReceptionDashboard from './ReceptionDashboard'
+import ReceptionPOS from './ReceptionPOS'
+import CashControl from './CashControl'
 
-export default function AdminPanel({ open, onClose, onToast, isAdminUser = false }) {
+export default function AdminPanel({ open, onClose, onToast, onNewClient, childDialogOpen = false, isAdminUser = false }) {
   const [tab, setTab] = useState('dashboard')
   const admin = useAdminClients()
   const isAdmin = isAdminUser
@@ -21,13 +24,13 @@ export default function AdminPanel({ open, onClose, onToast, isAdminUser = false
   }, [open])
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!open || childDialogOpen) return undefined
     const onKey = (e) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, childDialogOpen, onClose])
 
   if (!open) return null
 
@@ -99,6 +102,24 @@ export default function AdminPanel({ open, onClose, onToast, isAdminUser = false
               <Users className="h-4 w-4" />
               Gestión de Clientes
             </button>
+            {!isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setTab('pos')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'pos' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
+                >
+                  <ShoppingCart className="h-4 w-4" /> POS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('cash')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'cash' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
+                >
+                  <Banknote className="h-4 w-4" /> Caja
+                </button>
+              </>
+            )}
             {isAdmin && (
               <>
                 <button
@@ -133,7 +154,21 @@ export default function AdminPanel({ open, onClose, onToast, isAdminUser = false
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {tab === 'dashboard' ? (
-          <AdminDashboard />
+          isAdmin ? (
+            <AdminDashboard />
+          ) : (
+            <ReceptionDashboard
+              clients={admin.clients}
+              attendance={admin.attendance}
+              onNewClient={onNewClient}
+              onOpenPOS={() => setTab('pos')}
+              onToast={onToast}
+            />
+          )
+        ) : tab === 'pos' && !isAdmin ? (
+          <ReceptionPOS onToast={onToast} onOpenCashControl={() => setTab('cash')} />
+        ) : tab === 'cash' && !isAdmin ? (
+          <CashControl onToast={onToast} />
         ) : tab === 'attendance' ? (
           <AttendanceControl
             clients={admin.clients}
@@ -149,6 +184,10 @@ export default function AdminPanel({ open, onClose, onToast, isAdminUser = false
           <ClientsManagement
             clients={admin.clients}
             onRenewMembership={admin.renewMembership}
+            onUpdateClient={admin.updateClient}
+            onSetMembershipFrozen={admin.setMembershipFrozen}
+            onGetClientPayments={admin.getClientPayments}
+            onNewClient={onNewClient}
             onToast={onToast}
           />
         )}

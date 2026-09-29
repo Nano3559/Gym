@@ -55,6 +55,7 @@ function AppContent() {
   const [extraBooked, setExtraBooked] = useState({})
   const [toast, setToast] = useState(null)
   const [isVisionOpen, setVisionOpen] = useState(false)
+  const [isPostureVisionOpen, setPostureVisionOpen] = useState(false)
 
   // Módulo 6: panel de recepción / administración.
   const [isAdminOpen, setAdminOpen] = useState(false)
@@ -91,6 +92,10 @@ function AppContent() {
       features: plan?.features || [],
     }
   }, [membership, plans])
+  const canUseFoodVision = Boolean(
+    currentUser && ['completo', 'premium'].includes(activePlan?.code)
+  )
+  const canUsePostureVision = Boolean(currentUser && activePlan?.code === 'premium')
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type })
@@ -136,9 +141,8 @@ function AppContent() {
   )
 
   const handleInscribirme = useCallback(() => {
-    setRegisterPlan('')
-    setRegisterOpen(true)
-  }, [])
+    scrollTo('#planes')
+  }, [scrollTo])
 
   const handleVerPlanes = useCallback(() => {
     scrollTo('#planes')
@@ -357,6 +361,9 @@ function AppContent() {
           onInscribirme={handleInscribirme}
           onVerPlanes={handleVerPlanes}
           onOpenVision={() => setVisionOpen(true)}
+          canUseFoodVision={canUseFoodVision}
+          onOpenPostureVision={() => setPostureVisionOpen(true)}
+          canUsePostureVision={canUsePostureVision}
           isAuthenticated={Boolean(currentUser)}
         />
         <Marquee />
@@ -431,13 +438,27 @@ function AppContent() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      <VisionModal open={isVisionOpen} onClose={() => setVisionOpen(false)} />
+      {canUseFoodVision && (
+        <VisionModal open={isVisionOpen} onClose={() => setVisionOpen(false)} />
+      )}
+      {canUsePostureVision && (
+        <VisionModal
+          open={isPostureVisionOpen}
+          onClose={() => setPostureVisionOpen(false)}
+          mode="posture"
+        />
+      )}
 
       {/* Módulo 6: panel de recepción (solo visible para la cuenta autorizada). */}
       <AdminPanel
         open={isAdminOpen}
         onClose={() => setAdminOpen(false)}
         onToast={showToast}
+        onNewClient={() => {
+          setRegisterPlan('')
+          setRegisterOpen(true)
+        }}
+        childDialogOpen={isRegisterOpen}
         isAdminUser={isAdminUser(currentUser)}
       />
     </div>

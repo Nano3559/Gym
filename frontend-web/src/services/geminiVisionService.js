@@ -1,7 +1,7 @@
-const GEMINI_MODEL = 'gemini-3.6-flash'
+const GEMINI_MODEL = 'gemini-3.5-flash'
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
-const ANALYSIS_PROMPT = `Analiza esta imagen de comida como nutricionista. Devuelve únicamente JSON válido, sin markdown, con esta forma exacta:
+const FOOD_ANALYSIS_PROMPT = `Analiza esta imagen de comida como nutricionista. Devuelve únicamente JSON válido, sin markdown, con esta forma exacta:
 {
   "dishName": "nombre breve del plato",
   "calories": 0,
@@ -11,6 +11,18 @@ const ANALYSIS_PROMPT = `Analiza esta imagen de comida como nutricionista. Devue
   "notes": "suposiciones importantes y cómo mejorar la precisión"
 }
 Estima las calorías de toda la porción visible. No inventes precisión: usa números enteros aproximados y explica en notes los ingredientes o cantidades que no puedan verse.`
+
+const POSTURE_ANALYSIS_PROMPT = `Evalúa la postura visible de la persona durante el ejercicio en esta imagen. Devuelve únicamente JSON válido, sin markdown, con esta forma exacta:
+{
+  "exerciseName": "nombre del ejercicio si se reconoce, o No identificado",
+  "score": 0,
+  "summary": "valoración breve y prudente",
+  "confidence": "alta|media|baja",
+  "observations": [{ "area": "zona corporal", "assessment": "alineación observable" }],
+  "recommendations": ["corrección práctica y concreta"],
+  "notes": "limitaciones de la imagen y aspectos que no pueden evaluarse"
+}
+score debe ser un entero de 1 a 10 solo si la pose es suficientemente visible; usa null si no se puede evaluar. Evalúa únicamente lo observable (por ejemplo espalda, rodillas, hombros y alineación); no afirmes que la postura es segura basándote en una sola imagen, no diagnostiques lesiones y no infieras movimiento, dolor ni ángulos no visibles. Si la persona o el ejercicio no se distinguen, dilo claramente y solicita una imagen más clara.`
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -30,7 +42,7 @@ function parseAnalysis(text) {
   }
 }
 
-export async function analyzeFoodImage(file) {
+async function analyzeImage(file, prompt) {
   if (!file?.type.startsWith('image/')) {
     throw new Error('Selecciona una imagen válida.')
   }
@@ -53,7 +65,7 @@ export async function analyzeFoodImage(file) {
         contents: [
           {
             parts: [
-              { text: ANALYSIS_PROMPT },
+              { text: prompt },
               { inlineData: { mimeType: file.type, data: base64Image } },
             ],
           },
@@ -81,4 +93,12 @@ export async function analyzeFoodImage(file) {
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!text) throw new Error('Gemini no encontró una respuesta para esta imagen.')
   return parseAnalysis(text)
+}
+
+export function analyzeFoodImage(file) {
+  return analyzeImage(file, FOOD_ANALYSIS_PROMPT)
+}
+
+export function analyzeExercisePosture(file) {
+  return analyzeImage(file, POSTURE_ANALYSIS_PROMPT)
 }

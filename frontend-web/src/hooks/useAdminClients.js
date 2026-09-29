@@ -32,9 +32,9 @@ export default function useAdminClients() {
       // 1) Todos los usuarios registrados (profiles), el catálogo de planes y las
       //    membresías para calcular fechas de inicio/vencimiento.
       const [perfilesRes, planesRes, membresiasRes] = await Promise.all([
-        supabase.from('profiles').select('id, nombre, apellido, ci, telefono, plan_id'),
+        supabase.from('profiles').select('id, nombre, apellido, ci, telefono, fecha_nacimiento, plan_id'),
         supabase.from('plans').select('id, codigo, nombre'),
-        supabase.from('memberships').select('user_id, plan_id, fecha_inicio, fecha_vencimiento'),
+        supabase.from('memberships').select('user_id, plan_id, fecha_inicio, fecha_vencimiento, estado'),
       ])
       if (perfilesRes.error) throw perfilesRes.error
 
@@ -54,6 +54,7 @@ export default function useAdminClients() {
             plan_id: m.plan_id,
             fechaInicio: m.fecha_inicio ? m.fecha_inicio.slice(0, 10) : '',
             fechaVencimiento: vencimiento,
+            membresiaEstado: m.estado || 'activa',
           })
         }
       }
@@ -68,10 +69,12 @@ export default function useAdminClients() {
           apellido: p.apellido || '',
           ci: p.ci || '',
           telefono: p.telefono || '',
+          fechaNacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '',
           plan: plan.plan,
           planNombre: plan.planNombre,
           fechaInicio: mem.fechaInicio || '',
           fechaVencimiento: mem.fechaVencimiento || '',
+          membresiaEstado: mem.membresiaEstado || '',
           photo: null,
         }
       })
@@ -180,5 +183,87 @@ export default function useAdminClients() {
     [clients]
   )
 
-  return { clients, attendance, loading, refresh, registerAttendance, renewMembership }
+  const updateClient = useCallback(async (clientId, changes) => {
+    const client = clients.find((item) => item.id === clientId)
+    if (!client) return { ok: false, message: 'No se encontró el socio.' }
+
+    const updated = { ...client, ...changes }
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientId)
+    if (isSupabaseConfigured && supabase && isUuid) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          nombre: changes.nombre,
+          apellido: changes.apellido,
+          ci: changes.ci,
+          telefono: changes.telefono,
+        })
+        .eq('id', clientId)
+      if (error) return { ok: false, message: error.message }
+    }
+
+    setClients((prev) => prev.map((item) => item.id === clientId ? updated : item))
+    try {
+      const saved = JSON.parse(localStorage.getItem('gym_registered_clients') || '[]')
+      const next = saved.map((item) => item.id === clientId
+        ? { ...item, name: `${changes.nombre} ${changes.apellido}`.trim(), ci: changes.ci, phone: changes.telefono }
+        : item)
+      localStorage.setItem('gym_registered_clients', JSON.stringify(next))
+    } catch {
+      // Los datos en memoria siguen actualizados aunque el almacenamiento local falle.
+    }
+    return { ok: true, client: updated }
+  }, [clients])
+
+  const setMembershipFrozen = useCallback(async (clientId, frozen) => {
+    const client = clients.find((item) => item.id === clientId)
+    if (!client) return { ok: false, message: 'No se encontró el socio.' }
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientId)
+
+    if (isSupabaseConfigured && supabase && isUuid) {
+      const { data, error } = await supabase
+        .from('memberships')
+        .update({ estado: frozen ? 'congelada' : 'activa' })
+        .eq('user_id', clientId)
+        .eq('estado', frozen ? 'activa' : 'congelada')
+        .select('id')
+      if (error) return { ok: false, message: error.message }
+      if (!data?.length) {
+        return {
+          ok: false,
+          message: frozen
+            ? 'No se encontró una membresía activa para congelar.'
+            : 'No se encontró una membresía congelada para reactivar.',
+        }
+      }
+    }
+
+    setClients((prev) => prev.map((item) => item.id === clientId
+      ? { ...item, membresiaEstado: frozen ? 'congelada' : 'activa' }
+      : item))
+    return { ok: true }
+  }, [clients])
+
+  const getClientPayments = useCallback(async (clientId) => {
+    if (!isSupabaseConfigured || !supabase) return { ok: true, payments: [] }
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, monto, metodo_pago, estado_pago, created_at, plans(nombre)')
+      .eq('user_id', clientId)
+      .order('created_at', { ascending: false })
+    if (error) return { ok: false, message: error.message, payments: [] }
+    return { ok: true, payments: data || [] }
+  }, [])
+
+  return {
+    clients,
+    attendance,
+    loading,
+    refresh,
+    registerAttendance,
+    renewMembership,
+    updateClient,
+    setMembershipFrozen,
+    getClientPayments,
+  }
 }

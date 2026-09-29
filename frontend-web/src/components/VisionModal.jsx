@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Flame, LoaderCircle, RotateCcw, ScanSearch, Upload } from 'lucide-react'
+import { Camera, Check, Flame, LoaderCircle, RotateCcw, ScanSearch, Upload } from 'lucide-react'
 import Modal from './ui/Modal'
-import { analyzeFoodImage } from '../services/geminiVisionService'
+import { analyzeExercisePosture, analyzeFoodImage } from '../services/geminiVisionService'
 
-export default function VisionModal({ open, onClose }) {
+export default function VisionModal({ open, onClose, mode = 'food' }) {
   const uploadInputRef = useRef(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -13,6 +13,8 @@ export default function VisionModal({ open, onClose }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const isPostureMode = mode === 'posture'
+  const title = isPostureMode ? 'Evaluar postura' : 'Analizar comida'
 
   useEffect(() => {
     if (!preview) return undefined
@@ -83,7 +85,7 @@ export default function VisionModal({ open, onClose }) {
         setError('No se pudo capturar la foto.')
         return
       }
-      selectFile(new File([blob], `comida-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+      selectFile(new File([blob], `analisis-${Date.now()}.jpg`, { type: 'image/jpeg' }))
       stopCamera()
     }, 'image/jpeg', 0.9)
   }
@@ -93,7 +95,10 @@ export default function VisionModal({ open, onClose }) {
     setLoading(true)
     setError('')
     try {
-      setResult(await analyzeFoodImage(file))
+      const analysis = isPostureMode
+        ? await analyzeExercisePosture(file)
+        : await analyzeFoodImage(file)
+      setResult(analysis)
     } catch (analysisError) {
       setError(analysisError.message)
     } finally {
@@ -115,14 +120,16 @@ export default function VisionModal({ open, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Analizar comida" maxWidth="max-w-2xl">
+    <Modal open={open} onClose={handleClose} title={title} maxWidth="max-w-2xl">
       <div className="space-y-5">
         <div>
           <p className="section-label">
-            <ScanSearch className="h-4 w-4" /> Visión nutricional
+            <ScanSearch className="h-4 w-4" /> {isPostureMode ? 'Evaluación de técnica' : 'Visión nutricional'}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Fotografía tu plato o elige una imagen para obtener una estimación de calorías.
+            {isPostureMode
+              ? 'Muestra la postura durante el ejercicio. La evaluación solo considera lo visible en la imagen.'
+              : 'Fotografía tu plato o elige una imagen para obtener una estimación de calorías.'}
           </p>
         </div>
 
@@ -198,7 +205,7 @@ export default function VisionModal({ open, onClose }) {
                 className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60"
               >
                 {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
-                {loading ? 'Analizando...' : 'Analizar plato'}
+                {loading ? 'Analizando...' : isPostureMode ? 'Evaluar postura' : 'Analizar plato'}
               </button>
             </div>
           </div>
@@ -206,7 +213,7 @@ export default function VisionModal({ open, onClose }) {
 
         {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
 
-        {result && (
+        {result && !isPostureMode && (
           <section className="space-y-4 rounded-2xl border border-volt/30 bg-volt/5 p-5" aria-live="polite">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -237,8 +244,46 @@ export default function VisionModal({ open, onClose }) {
           </section>
         )}
 
+        {result && isPostureMode && (
+          <section className="space-y-4 rounded-2xl border border-volt/30 bg-volt/5 p-5" aria-live="polite">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-volt">Evaluación visual</p>
+                <h4 className="mt-1 font-display text-2xl font-bold uppercase text-white">{result.exerciseName}</h4>
+              </div>
+              <div className="rounded-xl bg-accent px-3 py-2 text-white">
+                <strong className="text-lg">{result.score ?? 'N/E'}</strong>
+                <span className="ml-1 text-xs">{result.score == null ? '' : '/ 10'}</span>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-white">{result.summary}</p>
+            <p className="text-sm text-muted">Confianza: <span className="capitalize text-white">{result.confidence}</span></p>
+            {result.observations?.length > 0 && (
+              <ul className="divide-y divide-line rounded-xl border border-line bg-black/20 px-4">
+                {result.observations.map((item, index) => (
+                  <li key={`${item.area}-${index}`} className="flex gap-3 py-3 text-sm">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-volt" />
+                    <span><strong className="text-white">{item.area}: </strong><span className="text-muted">{item.assessment}</span></span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {result.recommendations?.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-volt">Sugerencias</p>
+                <ul className="list-inside list-disc space-y-1 text-sm text-muted">
+                  {result.recommendations.map((recommendation, index) => <li key={`${index}-${recommendation}`}>{recommendation}</li>)}
+                </ul>
+              </div>
+            )}
+            {result.notes && <p className="text-xs leading-relaxed text-muted">Nota: {result.notes}</p>}
+          </section>
+        )}
+
         <p className="text-xs leading-relaxed text-muted">
-          Las calorías son una estimación visual y pueden variar según ingredientes, preparación y tamaño de la porción.
+          {isPostureMode
+            ? 'La evaluación desde una sola foto es orientativa; no reemplaza la supervisión de un entrenador ni permite evaluar el movimiento completo.'
+            : 'Las calorías son una estimación visual y pueden variar según ingredientes, preparación y tamaño de la porción.'}
         </p>
       </div>
     </Modal>

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 
-export default function Modal({ open, onClose, title, children, maxWidth = 'max-w-lg' }) {
+export default function Modal({ open, onClose, title, children, maxWidth = 'max-w-lg', zIndex = 'z-50' }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {
@@ -19,7 +19,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 'max-
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
