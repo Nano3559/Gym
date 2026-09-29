@@ -1,13 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Banknote, Minus, Plus, Printer, ReceiptText, ShoppingBag, Trash2 } from 'lucide-react'
-import { getActiveCashShift, appendPosSale } from '../../services/receptionCashService'
-
-const PRODUCTS = [
-  { id: 'water', name: 'Agua', detail: 'Botella 600 ml', price: 5 },
-  { id: 'protein', name: 'Suplemento', detail: 'Porción individual', price: 25 },
-  { id: 'lock', name: 'Candado', detail: 'Candado para casillero', price: 35 },
-  { id: 'towel', name: 'Toalla', detail: 'Toalla deportiva', price: 45 },
-]
+import { appendPosSale } from '../../services/receptionCashService'
+import { loadInventoryProducts, sellInventoryProducts } from '../../services/inventoryService'
+import { loadCurrentCashShift } from '../../services/cashRegisterService'
 
 const PAYMENT_METHODS = [
   { id: 'efectivo', label: 'Efectivo' },
@@ -19,17 +14,50 @@ const PAYMENT_METHODS = [
 const formatMoney = (amount) => `${Number(amount).toLocaleString('es-BO', { minimumFractionDigits: 2 })} Bs.`
 
 export default function ReceptionPOS({ onToast, onOpenCashControl }) {
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [hasCashShift, setHasCashShift] = useState(false)
+  const [cashShiftLoading, setCashShiftLoading] = useState(true)
+  const [inventoryError, setInventoryError] = useState('')
   const [cart, setCart] = useState({})
   const [method, setMethod] = useState('efectivo')
   const [receipt, setReceipt] = useState(null)
   const [checkoutError, setCheckoutError] = useState('')
+  const [selling, setSelling] = useState(false)
 
-  const items = useMemo(() => PRODUCTS
+  const refreshProducts = async () => {
+    setProductsLoading(true)
+    try {
+      const result = await loadInventoryProducts()
+      setProducts(result.products)
+      setInventoryError('')
+    } catch (error) {
+      setInventoryError(error.message || 'No se pudo cargar el inventario. Aplica la migración de inventario en Supabase.')
+    } finally {
+      setProductsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    refreshProducts()
+    loadCurrentCashShift()
+      .then(({ shift }) => setHasCashShift(Boolean(shift)))
+      .catch((error) => setCheckoutError(error.message || 'No se pudo consultar el turno de caja.'))
+      .finally(() => setCashShiftLoading(false))
+  }, [])
+
+  const items = useMemo(() => products
     .filter((product) => cart[product.id])
-    .map((product) => ({ ...product, quantity: cart[product.id], subtotal: product.price * cart[product.id] })), [cart])
+    .map((product) => ({ ...product, price: product.salePrice, quantity: cart[product.id], subtotal: product.salePrice * cart[product.id] })), [products, cart])
   const total = items.reduce((sum, item) => sum + item.subtotal, 0)
 
   const changeQuantity = (productId, delta) => {
+    const product = products.find((item) => item.id === productId)
+    if (delta > 0 && product && (cart[productId] || 0) >= product.stock) {
+      setCheckoutError(`Stock máximo disponible de ${product.name}: ${product.stock}.`)
+      return
+    }
     setCart((current) => {
       const nextQuantity = (current[productId] || 0) + delta
       if (nextQuantity <= 0) {
@@ -41,11 +69,29 @@ export default function ReceptionPOS({ onToast, onOpenCashControl }) {
     })
   }
 
-  const completeSale = () => {
+  const completeSale = async () => {
     if (!items.length) return
-    const shift = getActiveCashShift()
+    let shift
+    try {
+      const current = await loadCurrentCashShift()
+      shift = current.shift
+    } catch (error) {
+      setCheckoutError(error.message || 'No se pudo consultar el turno de caja.')
+      return
+    }
     if (!shift) {
       setCheckoutError('Abre el turno de caja antes de registrar ventas.')
+      return
+    }
+    setSelling(true)
+    const stockResult = await sellInventoryProducts(
+      items.map((item) => ({ id: item.id, quantity: item.quantity })),
+      { shiftId: shift.id, total, method }
+    )
+    if (!stockResult.ok) {
+      setCheckoutError(stockResult.message)
+      setSelling(false)
+      await refreshProducts()
       return
     }
     const now = new Date()
@@ -58,10 +104,19 @@ export default function ReceptionPOS({ onToast, onOpenCashControl }) {
       total,
       method,
     }
-    appendPosSale(sale)
+    try {
+      appendPosSale(sale)
+    } catch {
+      setCheckoutError('El stock se descontó, pero no se pudo guardar el comprobante local. Anota el número de venta y avisa al administrador.')
+      setSelling(false)
+      await refreshProducts()
+      return
+    }
     setReceipt(sale)
     setCart({})
     setCheckoutError('')
+    setSelling(false)
+    await refreshProducts()
     onToast('Venta registrada. Comprobante interno generado.')
   }
 
@@ -101,7 +156,7 @@ export default function ReceptionPOS({ onToast, onOpenCashControl }) {
         <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">Punto de venta</h2>
         <p className="mt-1 text-xs text-muted">Productos de mostrador · Los comprobantes son internos, no facturas fiscales.</p>
       </div>
-      {!getActiveCashShift() && (
+      {!cashShiftLoading && !hasCashShift && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-amber-200">Debes abrir un turno de caja antes de registrar ventas.</p>
           <button type="button" onClick={onOpenCashControl} className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/30 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10"><Banknote className="h-4 w-4" /> Ir a Caja</button>
@@ -110,17 +165,21 @@ export default function ReceptionPOS({ onToast, onOpenCashControl }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <section>
           <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Productos</h3>
+          {inventoryError && <p role="alert" className="mb-3 text-sm text-red-300">{inventoryError}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
-            {PRODUCTS.map((product) => (
+            {products.map((product) => (
               <article key={product.id} className="flex items-center justify-between gap-4 rounded-xl border border-line bg-surface p-4">
                 <div>
                   <h4 className="font-semibold text-white">{product.name}</h4>
-                  <p className="mt-1 text-xs text-muted">{product.detail}</p>
-                  <p className="mt-3 font-display text-lg font-bold text-volt">{formatMoney(product.price)}</p>
+                  <p className="mt-1 text-xs text-muted">{product.description}</p>
+                  <p className="mt-3 font-display text-lg font-bold text-volt">{formatMoney(product.salePrice)}</p>
+                  <p className="mt-1 text-xs text-muted">Disponible: {product.stock}</p>
                 </div>
-                <button type="button" onClick={() => changeQuantity(product.id, 1)} aria-label={`Añadir ${product.name}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent-hover"><Plus className="h-5 w-5" /></button>
+                <button type="button" disabled={product.stock <= (cart[product.id] || 0)} onClick={() => changeQuantity(product.id, 1)} aria-label={`Añadir ${product.name}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-5 w-5" /></button>
               </article>
             ))}
+            {!productsLoading && products.length === 0 && <p className="text-sm text-muted">No hay productos disponibles. Administra el catálogo en Gestión de Planes → Inventario POS.</p>}
+            {productsLoading && <p className="text-sm text-muted">Cargando productos...</p>}
           </div>
         </section>
 
@@ -149,7 +208,7 @@ export default function ReceptionPOS({ onToast, onOpenCashControl }) {
             </div>
           </fieldset>
           {checkoutError && <p role="alert" className="mt-3 text-xs text-red-300">{checkoutError}</p>}
-          <button type="button" disabled={!items.length} onClick={completeSale} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"><ReceiptText className="h-4 w-4" /> Cobrar y emitir comprobante</button>
+          <button type="button" disabled={!items.length || selling} onClick={completeSale} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"><ReceiptText className="h-4 w-4" /> {selling ? 'Procesando venta...' : 'Cobrar y emitir comprobante'}</button>
         </aside>
       </div>
     </div>

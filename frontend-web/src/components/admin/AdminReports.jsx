@@ -5,6 +5,9 @@ import {
   FileBarChart,
   Users,
   Activity,
+  FileDown,
+  Plus,
+  ReceiptText,
 } from 'lucide-react'
 import useAdminReports, {
   METHOD_KEYS,
@@ -72,11 +75,16 @@ function Bar({ value, max, tone = 'accent' }) {
 export default function AdminReports() {
   const {
     payments,
+    expenses,
     classRanking,
     activas,
     vencidas,
     totalClientes,
     refresh,
+    createExpense,
+    isDemoPayments,
+    expensesAreLocal,
+    dataError,
     fmtMoney,
     fmtInt,
   } = useAdminReports()
@@ -85,6 +93,15 @@ export default function AdminReports() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [expenseForm, setExpenseForm] = useState({
+    categoria: 'Alquiler',
+    descripcion: '',
+    monto: '',
+    metodo: 'efectivo',
+    fecha: todayStr(),
+  })
+  const [expenseSaving, setExpenseSaving] = useState(false)
+  const [expenseMessage, setExpenseMessage] = useState('')
 
   useEffect(() => {
     // Refresco inicial best-effort (sincronización con sistema externo).
@@ -108,10 +125,47 @@ export default function AdminReports() {
   }, [filtered])
 
   const ingresosTotal = filtered.reduce((acc, p) => acc + (p.monto || 0), 0)
+  const filteredExpenses = expenses.filter((expense) => inRange(expense.fecha, rangeType, from, to))
+  const egresosTotal = filteredExpenses.reduce((total, expense) => total + (Number(expense.monto) || 0), 0)
+  const resultadoNeto = ingresosTotal - egresosTotal
   const maxMethod = Math.max(1, ...METHOD_KEYS.map((k) => byMethod[k].total))
 
   const activeShare = totalClientes > 0 ? Math.round((activas / totalClientes) * 100) : 0
   const maxClass = classRanking.length ? classRanking[0].booked : 1
+
+  const exportCsv = (filename, headers, rows) => {
+    const escapeCell = (value) => {
+      let text = String(value ?? '')
+      if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+      return `"${text.replaceAll('"', '""')}"`
+    }
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n')}`
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExpenseSubmit = async (event) => {
+    event.preventDefault()
+    const amount = Number(expenseForm.monto)
+    if (!expenseForm.descripcion.trim() || !Number.isFinite(amount) || amount <= 0) {
+      setExpenseMessage('Ingresa una descripción y un importe mayor que cero.')
+      return
+    }
+    setExpenseSaving(true)
+    setExpenseMessage('')
+    const result = await createExpense({ ...expenseForm, descripcion: expenseForm.descripcion.trim(), monto: amount })
+    setExpenseSaving(false)
+    if (!result.ok) {
+      setExpenseMessage(result.message)
+      return
+    }
+    setExpenseForm((current) => ({ ...current, descripcion: '', monto: '' }))
+    setExpenseMessage(result.local ? 'Gasto guardado localmente en este navegador.' : 'Gasto guardado en Supabase.')
+  }
 
   return (
     <div className="space-y-6">
@@ -122,7 +176,7 @@ export default function AdminReports() {
             Reportes detallados
           </h2>
           <p className="mt-1 text-xs text-muted">
-            Análisis por período · Ingresos, asistencias y estado de clientes.
+            Análisis por período · Ingresos, egresos, flujo financiero y actividad de clientes.
           </p>
         </div>
         <button
@@ -138,6 +192,13 @@ export default function AdminReports() {
           Actualizar
         </button>
       </div>
+
+      {(dataError || isDemoPayments || expensesAreLocal) && (
+        <p className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-xs leading-relaxed text-amber-200">
+          {dataError || (isDemoPayments ? 'Los ingresos mostrados son datos de demostración.' : 'Los egresos mostrados se guardan localmente en este navegador.')}
+          {!dataError && isDemoPayments && expensesAreLocal ? ' Los gastos también son locales.' : ''}
+        </p>
+      )}
 
       {/* Filtros de fecha */}
       <div className="rounded-2xl border border-line bg-surface p-5">
@@ -209,6 +270,88 @@ export default function AdminReports() {
           ))}
         </ul>
       </div>
+
+      <section className="rounded-2xl border border-line bg-surface p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-display text-base font-semibold uppercase tracking-wide text-white"><ReceiptText className="h-4 w-4 text-accent" /> Egresos · Gastos operativos</h3>
+            <p className="mt-1 text-xs text-muted">Registra sueldos, alquiler, servicios, mantenimiento, compras y otros gastos.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => exportCsv(
+              `ingresos-${todayStr()}.csv`,
+              ['Fecha', 'Cliente', 'Método', 'Recibo', 'Importe (Bs.)'],
+              filtered.map((payment) => [payment.fecha, payment.cliente, METHOD_NAMES[payment.metodo] || payment.metodo, payment.receiptId || payment.id, payment.monto])
+            )}
+            className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-white hover:border-accent hover:text-accent"
+          ><FileDown className="h-4 w-4" /> Exportar ingresos CSV</button>
+        </div>
+
+        <form onSubmit={handleExpenseSubmit} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <label className="text-xs text-muted">Categoría
+            <select className="field mt-1.5" value={expenseForm.categoria} onChange={(event) => setExpenseForm((current) => ({ ...current, categoria: event.target.value }))}>
+              {['Sueldos', 'Alquiler', 'Luz', 'Agua', 'Mantenimiento', 'Compra de suplementos', 'Servicios', 'Otros'].map((category) => <option key={category}>{category}</option>)}
+            </select>
+          </label>
+          <label className="text-xs text-muted sm:col-span-2">Descripción
+            <input className="field mt-1.5" value={expenseForm.descripcion} onChange={(event) => setExpenseForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Detalle del gasto" required />
+          </label>
+          <label className="text-xs text-muted">Importe (Bs.)
+            <input className="field mt-1.5" type="number" min="0.01" step="0.01" value={expenseForm.monto} onChange={(event) => setExpenseForm((current) => ({ ...current, monto: event.target.value }))} required />
+          </label>
+          <label className="text-xs text-muted">Fecha
+            <input className="field mt-1.5" type="date" value={expenseForm.fecha} onChange={(event) => setExpenseForm((current) => ({ ...current, fecha: event.target.value }))} required />
+          </label>
+          <div className="flex items-end">
+            <button disabled={expenseSaving} type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:opacity-60"><Plus className="h-4 w-4" />{expenseSaving ? 'Guardando...' : 'Registrar gasto'}</button>
+          </div>
+          <label className="text-xs text-muted">Medio de pago
+            <select className="field mt-1.5" value={expenseForm.metodo} onChange={(event) => setExpenseForm((current) => ({ ...current, metodo: event.target.value }))}>
+              {METHOD_KEYS.map((key) => <option key={key} value={key}>{METHOD_NAMES[key]}</option>)}
+            </select>
+          </label>
+          {expenseMessage && <p className="self-end pb-3 text-xs text-muted" role="status">{expenseMessage}</p>}
+        </form>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+          <p className="text-sm text-muted">{filteredExpenses.length} gastos · Total <strong className="text-red-300">{fmtMoney(egresosTotal)}</strong></p>
+          <button
+            type="button"
+            onClick={() => exportCsv(
+              `egresos-${todayStr()}.csv`,
+              ['Fecha', 'Categoría', 'Descripción', 'Método', 'Importe (Bs.)'],
+              filteredExpenses.map((expense) => [expense.fecha, expense.categoria, expense.descripcion, METHOD_NAMES[expense.metodo] || expense.metodo, expense.monto])
+            )}
+            className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-white hover:border-accent hover:text-accent"
+          ><FileDown className="h-4 w-4" /> Exportar egresos CSV</button>
+        </div>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-line">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead><tr className="border-b border-line bg-card/40 text-xs uppercase text-muted"><th className="px-3 py-2.5">Fecha</th><th className="px-3 py-2.5">Categoría</th><th className="px-3 py-2.5">Descripción</th><th className="px-3 py-2.5">Método</th><th className="px-3 py-2.5 text-right">Importe</th></tr></thead>
+            <tbody>
+              {filteredExpenses.map((expense) => <tr key={expense.id} className="border-b border-line/60"><td className="px-3 py-3 text-muted">{expense.fecha}</td><td className="px-3 py-3 text-white">{expense.categoria}</td><td className="px-3 py-3 text-muted">{expense.descripcion}</td><td className="px-3 py-3 text-muted">{METHOD_NAMES[expense.metodo] || expense.metodo}</td><td className="px-3 py-3 text-right font-semibold text-red-300">{fmtMoney(expense.monto)}</td></tr>)}
+              {!filteredExpenses.length && <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-muted">No hay gastos para este período.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-accent/20 bg-gradient-to-r from-accent/10 via-surface to-volt/5 p-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Estado de resultados · {RANGE_OPTIONS.find((option) => option.value === rangeType)?.label}</p>
+            <h3 className="mt-2 font-display text-lg font-semibold uppercase text-white">Ingresos − egresos = resultado neto</h3>
+          </div>
+          <p className={`font-display text-4xl font-bold ${resultadoNeto >= 0 ? 'text-volt' : 'text-red-300'}`}>{fmtMoney(resultadoNeto)}</p>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-line bg-black/20 p-4"><p className="text-xs uppercase text-muted">Ingresos</p><p className="mt-1 text-lg font-bold text-white">{fmtMoney(ingresosTotal)}</p></div>
+          <div className="rounded-lg border border-line bg-black/20 p-4"><p className="text-xs uppercase text-muted">Egresos</p><p className="mt-1 text-lg font-bold text-red-300">− {fmtMoney(egresosTotal)}</p></div>
+          <div className="rounded-lg border border-line bg-black/20 p-4"><p className="text-xs uppercase text-muted">Margen neto</p><p className="mt-1 text-lg font-bold text-white">{ingresosTotal > 0 ? `${Math.round((resultadoNeto / ingresosTotal) * 100)}%` : '—'}</p></div>
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-muted">El resultado usa únicamente pagos completados y gastos registrados para el período seleccionado. No incluye impuestos, depreciación ni gastos no registrados.</p>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Reporte de asistencias y reservas */}

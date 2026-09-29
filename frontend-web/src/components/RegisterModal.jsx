@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, User, Phone, Mail, Home, Cake, CreditCard, HeartPulse, Lock } from 'lucide-react'
 import Modal from './ui/Modal'
 import { useAuth } from '../context/AuthContext'
+import { useGymSettings } from '../context/GymSettingsContext'
 import { registeredClientFromForm, saveRegisteredClient } from '../lib/registeredClients'
 
 const initialForm = {
@@ -19,6 +20,7 @@ const initialForm = {
 
 export default function RegisterModal({ open, onClose, defaultPlan, onSuccess }) {
   const { signUp } = useAuth()
+  const { settings } = useGymSettings()
   const [form, setForm] = useState(() => ({
     ...initialForm,
     plan: defaultPlan || '',
@@ -244,7 +246,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
           </div>
 
           <div className="rounded-xl border border-line bg-card-2 px-4 py-3 text-xs text-muted">
-            Al enviar aceptas nuestros términos y políticas de tratamiento de datos.
+            {settings.legalTerms}
           </div>
 
           <button

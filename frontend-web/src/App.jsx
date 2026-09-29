@@ -20,6 +20,7 @@ import VisionModal from './components/VisionModal'
 import AdminPanel from './components/admin/AdminPanel'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlansProvider, usePlans } from './context/PlansContext'
+import { GymSettingsProvider } from './context/GymSettingsContext'
 import useClasses from './hooks/useClasses'
 import useBookings from './hooks/useBookings'
 import useMembership from './hooks/useMembership'
@@ -67,6 +68,7 @@ function AppContent() {
     return {
       id: authUser.id,
       email: authUser.email,
+      app_metadata: authUser.app_metadata || {},
       ...(profile || {}),
       nombre: profile?.nombre || 'Cliente',
     }
@@ -460,6 +462,8 @@ function AppContent() {
         }}
         childDialogOpen={isRegisterOpen}
         isAdminUser={isAdminUser(currentUser)}
+        staffRole={currentUser?.app_metadata?.staff_role || (isReceptionUser(currentUser) ? 'reception' : '')}
+        staffPermissions={currentUser?.app_metadata?.staff_permissions || []}
       />
     </div>
   )
@@ -469,7 +473,9 @@ export default function App() {
   return (
     <AuthProvider>
       <PlansProvider>
-        <AppContent />
+        <GymSettingsProvider>
+          <AppContent />
+        </GymSettingsProvider>
       </PlansProvider>
     </AuthProvider>
   )

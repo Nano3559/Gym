@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { seedClients, shiftDate } from '../data/adminData'
 import { weeklyClasses } from '../data/gymData'
 import { getMembershipStatus } from '../lib/membershipStatus'
+import { appendCashOperation, getCashOperations } from '../services/receptionCashService'
 
 export const METHOD_KEYS = ['efectivo', 'qr', 'transferencia', 'tarjeta']
 
@@ -66,6 +67,21 @@ function fmtMoney(n) {
  * leer datos reales (best-effort) y ante cualquier error usa la semilla local.
  */
 export default function useAdminReports() {
+  const [payments, setPayments] = useState(SEED_PAYMENTS)
+  const [expenses, setExpenses] = useState(() => getCashOperations()
+    .filter((entry) => entry.type === 'expense')
+    .map((entry) => ({
+      ...entry,
+      fecha: entry.date,
+      monto: Number(entry.amount) || 0,
+      categoria: entry.category || 'Otros',
+      descripcion: entry.description || '',
+      metodo: entry.method || 'efectivo',
+    })))
+  const [isDemoPayments, setIsDemoPayments] = useState(true)
+  const [expensesAreLocal, setExpensesAreLocal] = useState(true)
+  const [dataError, setDataError] = useState('')
+
   const reports = useMemo(() => {
     // Concurrencia por clase (agrupada por nombre sobre la parrilla semanal).
     const byName = new Map()
@@ -91,7 +107,6 @@ export default function useAdminReports() {
     const vencidas = seedClients.filter((c) => getMembershipStatus(c.fechaVencimiento).key === 'vencida')
 
     return {
-      payments: SEED_PAYMENTS,
       classRanking,
       clients: seedClients,
       activas: activas.length,
@@ -100,13 +115,109 @@ export default function useAdminReports() {
     }
   }, [])
 
-  const refresh = () => {
-    if (!isSupabaseConfigured || !supabase) return Promise.resolve()
-    return Promise.all([
-      supabase.from('pagos').select('monto, metodo, created_at'),
-      supabase.from('asistencia').select('id, fecha, plan'),
-    ]).catch(() => null)
-  }
+  const refresh = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setDataError('Supabase no está configurado: se muestran datos demo y egresos locales de este navegador.')
+      return
+    }
+    const [paymentsResult, expensesResult, profilesResult] = await Promise.all([
+      supabase.from('payments')
+        .select('id, user_id, monto, metodo_pago, estado_pago, transaction_id, created_at')
+        .eq('estado_pago', 'completado')
+        .order('created_at', { ascending: false }),
+      supabase.from('operational_expenses')
+        .select('id, category, description, amount, payment_method, expense_date, created_at')
+        .order('expense_date', { ascending: false }),
+      supabase.from('profiles').select('id, nombre, apellido'),
+    ])
+    if (paymentsResult.error || expensesResult.error || profilesResult.error) {
+      setDataError(paymentsResult.error?.message || expensesResult.error?.message || profilesResult.error?.message || 'No se pudieron cargar los datos financieros.')
+      return
+    }
+    const profileById = new Map((profilesResult.data || []).map((profile) => [profile.id, profile]))
+    setPayments((paymentsResult.data || []).map((payment) => ({
+      id: payment.id,
+      receiptId: payment.transaction_id,
+      fecha: String(payment.created_at).slice(0, 10),
+      metodo: payment.metodo_pago,
+      monto: Number(payment.monto) || 0,
+      cliente: `${profileById.get(payment.user_id)?.nombre || ''} ${profileById.get(payment.user_id)?.apellido || ''}`.trim(),
+    })))
+    setExpenses((expensesResult.data || []).map((expense) => ({
+      id: expense.id,
+      fecha: expense.expense_date,
+      categoria: expense.category,
+      descripcion: expense.description,
+      metodo: expense.payment_method,
+      monto: Number(expense.amount) || 0,
+    })))
+    setIsDemoPayments(false)
+    setExpensesAreLocal(false)
+    setDataError('')
+  }, [])
 
-  return { ...reports, refresh, fmtMoney, fmtInt }
+  const createExpense = useCallback(async (expense) => {
+    if (isSupabaseConfigured && supabase) {
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
+      if (userError || !userResult.user) return { ok: false, message: 'No se pudo identificar al administrador.' }
+      const { data, error } = await supabase
+        .from('operational_expenses')
+        .insert({
+          category: expense.categoria,
+          description: expense.descripcion,
+          amount: expense.monto,
+          payment_method: expense.metodo,
+          expense_date: expense.fecha,
+          created_by: userResult.user.id,
+        })
+        .select('id, category, description, amount, payment_method, expense_date')
+        .single()
+      if (error) return { ok: false, message: error.message }
+      setExpenses((current) => [{
+        id: data.id,
+        fecha: data.expense_date,
+        categoria: data.category,
+        descripcion: data.description,
+        metodo: data.payment_method,
+        monto: Number(data.amount) || 0,
+      }, ...current])
+      return { ok: true, local: false }
+    }
+
+    try {
+      const saved = appendCashOperation({
+        type: 'expense',
+        category: expense.categoria,
+        description: expense.descripcion,
+        amount: expense.monto,
+        method: expense.metodo,
+        date: expense.fecha,
+      })
+      setExpenses((current) => [{
+        id: saved.id,
+        fecha: saved.date,
+        categoria: saved.category,
+        descripcion: saved.description,
+        metodo: saved.method,
+        monto: Number(saved.amount) || 0,
+      }, ...current])
+      setExpensesAreLocal(true)
+      return { ok: true, local: true }
+    } catch {
+      return { ok: false, message: 'No se pudo guardar el gasto en este navegador.' }
+    }
+  }, [])
+
+  return {
+    ...reports,
+    payments,
+    expenses,
+    isDemoPayments,
+    expensesAreLocal,
+    dataError,
+    refresh,
+    createExpense,
+    fmtMoney,
+    fmtInt,
+  }
 }

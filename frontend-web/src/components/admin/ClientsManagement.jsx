@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import {
+  CalendarCheck,
   Check,
+  FileDown,
   MoreVertical,
   Pencil,
   RefreshCw,
@@ -116,8 +118,10 @@ export default function ClientsManagement({
   onUpdateClient,
   onSetMembershipFrozen,
   onGetClientPayments,
+  onGetClientHistory,
   onNewClient,
   onToast,
+  isAdmin = false,
 }) {
   const [filter, setFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
@@ -126,6 +130,11 @@ export default function ClientsManagement({
   const [freezeClient, setFreezeClient] = useState(null)
   const [editClient, setEditClient] = useState(null)
   const [historyClient, setHistoryClient] = useState(null)
+  const [detailClient, setDetailClient] = useState(null)
+  const [detailPayments, setDetailPayments] = useState([])
+  const [detailAttendance, setDetailAttendance] = useState([])
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
   const [payments, setPayments] = useState([])
   const [paymentsLoading, setPaymentsLoading] = useState(false)
   const [paymentsError, setPaymentsError] = useState('')
@@ -197,6 +206,19 @@ export default function ClientsManagement({
     setPaymentsLoading(false)
   }
 
+  const handleClientDetails = async (client) => {
+    setDetailClient(client)
+    setDetailPayments([])
+    setDetailAttendance([])
+    setDetailError('')
+    setDetailLoading(true)
+    const result = await onGetClientHistory(client.id)
+    setDetailPayments(result.payments || [])
+    setDetailAttendance(result.attendance || [])
+    setDetailError(result.ok ? '' : result.message)
+    setDetailLoading(false)
+  }
+
   const handleWhatsApp = (client) => {
     const phone = String(client.telefono || '').replace(/\D/g, '')
     if (!phone) {
@@ -221,6 +243,7 @@ export default function ClientsManagement({
           </p>
         </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={onNewClient}
@@ -228,6 +251,16 @@ export default function ClientsManagement({
           >
             <UserRoundPlus className="h-4 w-4" /> Nuevo Socio
           </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => downloadClientsCsv(clients)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-line px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:border-accent hover:text-accent"
+            >
+              <FileDown className="h-4 w-4" /> Exportar CSV
+            </button>
+          )}
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex flex-wrap gap-2" aria-label="Filtrar por estado">
               {[
@@ -283,9 +316,13 @@ export default function ClientsManagement({
                         {c.nombre[0]}
                         {c.apellido[0]}
                       </span>
-                      <span className="font-semibold text-white">
-                        {c.nombre} {c.apellido}
-                      </span>
+                      {isAdmin ? (
+                        <button type="button" onClick={() => handleClientDetails(c)} className="text-left font-semibold text-white underline-offset-4 hover:text-accent hover:underline">
+                          {c.nombre} {c.apellido}
+                        </button>
+                      ) : (
+                        <span className="font-semibold text-white">{c.nombre} {c.apellido}</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted">{c.ci}</td>
@@ -439,6 +476,16 @@ export default function ClientsManagement({
           onClose={() => setHistoryClient(null)}
         />
       )}
+      {detailClient && (
+        <ClientHistoryModal
+          client={detailClient}
+          payments={detailPayments}
+          attendance={detailAttendance}
+          loading={detailLoading}
+          error={detailError}
+          onClose={() => setDetailClient(null)}
+        />
+      )}
       {freezeClient && (
         <Modal
           open
@@ -481,4 +528,99 @@ export default function ClientsManagement({
       )}
     </div>
   )
+}
+
+function ClientHistoryModal({ client, payments, attendance, loading, error, onClose }) {
+  const lifetimeValue = payments
+    .filter((payment) => payment.estado_pago === 'completado')
+    .reduce((total, payment) => total + (Number(payment.monto) || 0), 0)
+
+  return (
+    <Modal open onClose={onClose} title={`${client.nombre} ${client.apellido}`} maxWidth="max-w-3xl">
+      <div className="space-y-5">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['CI', client.ci || '—'],
+            ['Teléfono', client.telefono || '—'],
+            ['Plan', client.planNombre || client.plan || '—'],
+            ['Vencimiento', client.fechaVencimiento || '—'],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-line bg-card px-3 py-2.5">
+              <p className="text-[11px] uppercase tracking-wide text-muted">{label}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-white">{value}</p>
+            </div>
+          ))}
+        </section>
+        <section className="rounded-xl border border-volt/30 bg-volt/5 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-volt">Life Time Value</p>
+          <p className="mt-1 font-display text-3xl font-bold text-white">{lifetimeValue.toLocaleString('es-BO', { minimumFractionDigits: 2 })} Bs.</p>
+          <p className="mt-1 text-xs text-muted">Total de pagos completados registrados en Supabase.</p>
+        </section>
+        {loading ? (
+          <p className="text-sm text-muted">Cargando pagos y asistencias...</p>
+        ) : error ? (
+          <p role="alert" className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-300">{error}</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="min-w-0">
+              <h4 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold uppercase text-white"><WalletCards className="h-4 w-4 text-accent" /> Historial de pagos</h4>
+              <div className="max-h-64 overflow-auto rounded-xl border border-line">
+                {payments.length ? payments.map((payment) => (
+                  <article key={payment.id} className="border-b border-line px-3 py-3 last:border-0">
+                    <div className="flex items-start justify-between gap-3 text-sm">
+                      <span className="font-semibold text-white">{payment.plans?.nombre || 'Pago'}</span>
+                      <strong className="whitespace-nowrap text-volt">{Number(payment.monto).toLocaleString('es-BO', { minimumFractionDigits: 2 })} Bs.</strong>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">{new Date(payment.created_at).toLocaleString('es-BO')} · {payment.metodo_pago} · {payment.estado_pago}</p>
+                    <p className="mt-1 break-all text-[11px] text-muted">Recibo: {payment.transaction_id || payment.id}</p>
+                  </article>
+                )) : <p className="px-3 py-5 text-sm text-muted">No hay pagos registrados.</p>}
+              </div>
+            </section>
+            <section className="min-w-0">
+              <h4 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold uppercase text-white"><CalendarCheck className="h-4 w-4 text-accent" /> Registro de asistencias</h4>
+              <div className="max-h-64 overflow-auto rounded-xl border border-line">
+                {attendance.length ? attendance.map((visit) => (
+                  <article key={visit.id} className="flex items-center justify-between gap-3 border-b border-line px-3 py-3 last:border-0">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{new Date(`${visit.fecha}T00:00:00`).toLocaleDateString('es-BO')}</p>
+                      <p className="mt-1 text-xs text-muted">{visit.plan || 'Ingreso al gimnasio'}</p>
+                    </div>
+                    <span className="text-xs text-muted">{String(visit.hora || '').slice(0, 5) || '—'}</span>
+                  </article>
+                )) : <p className="px-3 py-5 text-sm text-muted">No hay asistencias registradas.</p>}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+function downloadClientsCsv(clients) {
+  const headers = ['Nombre', 'Apellido', 'CI', 'Teléfono', 'Correo', 'Plan', 'Fecha de inicio', 'Vencimiento', 'Estado']
+  const escapeCell = (value) => {
+    let text = String(value ?? '')
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+    return `"${text.replaceAll('"', '""')}"`
+  }
+  const rows = clients.map((client) => [
+    client.nombre,
+    client.apellido,
+    client.ci,
+    client.telefono,
+    client.email || client.correo,
+    client.planNombre || client.plan,
+    client.fechaInicio,
+    client.fechaVencimiento,
+    client.membresiaEstado === 'congelada' ? 'Congelada' : getMembershipStatus(client.fechaVencimiento).label,
+  ])
+  const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n')}`
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `socios-ironforge-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
 }

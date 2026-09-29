@@ -3,11 +3,12 @@ import {
   MapPin, Phone, Mail, Send, MessageCircle, Clock3,
 } from 'lucide-react'
 import { Facebook, Instagram, XIcon, YouTube } from './SocialIcons'
-import { brand } from '../data/gymData'
+import { useGymSettings } from '../context/GymSettingsContext'
 
 const initialForm = { nombre: '', correo: '', telefono: '', mensaje: '' }
 
 export default function Contact({ onSend }) {
+  const { settings: brand } = useGymSettings()
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
 

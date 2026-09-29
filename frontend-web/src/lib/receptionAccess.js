@@ -7,5 +7,11 @@ export const RECEPTION_EMAIL = 'recepcion@ironforge.com'
 // Devuelve true solo si el correo coincide con el de la cuenta autorizada.
 export function isReceptionUser(user) {
   const email = user?.email || user?.correo || user?.user_metadata?.email
-  return Boolean(email && String(email).toLowerCase() === RECEPTION_EMAIL)
+  const appMetadata = user?.app_metadata || {}
+  const hasStaffPanel = Array.isArray(appMetadata.staff_permissions) && appMetadata.staff_permissions.includes('dashboard')
+  const activeStaff = appMetadata.staff_active !== false
+  return Boolean(activeStaff && (
+    (email && String(email).toLowerCase() === RECEPTION_EMAIL) ||
+    ['reception', 'trainer'].includes(appMetadata.staff_role) && hasStaffPanel
+  ))
 }

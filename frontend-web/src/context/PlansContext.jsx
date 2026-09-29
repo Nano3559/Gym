@@ -15,7 +15,12 @@ function normalize(p) {
     tagline: p.tagline || p.description || p.descripcion || '',
     description: p.description || p.descripcion || p.tagline || '',
     durationDays: Number(p.durationDays ?? p.duracion_dias ?? 30),
-    features: Array.isArray(p.features) ? p.features : [],
+    planType: p.planType || p.plan_type || 'standard',
+    startsAt: p.startsAt || p.starts_at || '',
+    endsAt: p.endsAt || p.ends_at || '',
+    features: Array.isArray(p.features)
+      ? p.features
+      : Array.isArray(p.caracteristicas) ? p.caracteristicas : [],
     highlighted: Boolean(p.highlighted),
     cta: p.cta || 'Elegir este plan',
     active: p.active !== false,
@@ -47,32 +52,32 @@ export function PlansProvider({ children }) {
   // Persistencia best-effort; ante cualquier error se conserva el estado local.
   const persist = useCallback(async (plan) => {
     if (!isSupabaseConfigured || !supabase || !plan.id) return
-    try {
-      await supabase.from('plans').upsert(
-        {
-          codigo: plan.id,
-          nombre: plan.name,
-          precio: plan.price,
-          descripcion: plan.description || plan.tagline,
-          duracion_dias: plan.durationDays,
-          caracteristicas: plan.features,
-          activo: plan.active,
-        },
-        { onConflict: 'codigo' }
-      )
-    } catch {
-      // Se ignora: el cambio ya quedó reflejado en el estado local.
-    }
+    const { error } = await supabase.from('plans').upsert(
+      {
+        codigo: plan.id,
+        nombre: plan.name,
+        precio: plan.price,
+        descripcion: plan.description || plan.tagline,
+        duracion_dias: plan.durationDays,
+        caracteristicas: plan.features,
+        activo: plan.active,
+        plan_type: plan.planType,
+        starts_at: plan.startsAt || null,
+        ends_at: plan.endsAt || null,
+      },
+      { onConflict: 'codigo' }
+    )
+    if (error) throw error
   }, [])
 
   const savePlan = useCallback(
     async (planData) => {
       const plan = normalize(planData)
+      await persist(plan)
       setPlans((prev) => {
         const exists = prev.some((p) => p.id === plan.id)
         return exists ? prev.map((p) => (p.id === plan.id ? plan : p)) : [...prev, plan]
       })
-      await persist(plan)
       return plan
     },
     [persist]
@@ -90,7 +95,10 @@ export function PlansProvider({ children }) {
   const value = useMemo(
     () => ({
       plans,
-      activePlans: plans.filter((p) => p.active),
+      activePlans: plans.filter((plan) => {
+        const today = new Date().toISOString().slice(0, 10)
+        return plan.active && (!plan.startsAt || plan.startsAt <= today) && (!plan.endsAt || plan.endsAt >= today)
+      }),
       savePlan,
       togglePlan,
     }),

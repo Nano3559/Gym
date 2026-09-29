@@ -2,12 +2,16 @@ import { useState } from 'react'
 import { BadgeCheck, Check, Edit3, Plus, Settings2, X, Zap } from 'lucide-react'
 import Modal from '../ui/Modal'
 import { usePlans } from '../../context/PlansContext'
+import InventoryManagement from './InventoryManagement'
 
 const EMPTY_FORM = {
   id: '',
   name: '',
   price: 180,
   durationDays: 30,
+  planType: 'standard',
+  startsAt: '',
+  endsAt: '',
   description: '',
   featuresText: '',
   highlighted: false,
@@ -26,6 +30,7 @@ export default function PlanManagement({ onToast }) {
   const [editing, setEditing] = useState(null) // null | 'new' | plan object
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
+  const [section, setSection] = useState('plans')
 
   const openEdit = (plan) => {
     setForm({
@@ -33,6 +38,9 @@ export default function PlanManagement({ onToast }) {
       name: plan.name,
       price: plan.price,
       durationDays: plan.durationDays,
+      planType: plan.planType || 'standard',
+      startsAt: plan.startsAt || '',
+      endsAt: plan.endsAt || '',
       description: plan.description,
       featuresText: (plan.features || []).join('\n'),
       highlighted: plan.highlighted,
@@ -66,6 +74,8 @@ export default function PlanManagement({ onToast }) {
     if (!form.name.trim()) errs.name = 'El nombre es obligatorio'
     if (!(Number(form.price) > 0)) errs.price = 'Ingresa un precio válido en Bs.'
     if (!(Number(form.durationDays) > 0)) errs.durationDays = 'Ingresa la duración en días'
+    if (form.planType === 'promotion' && !form.endsAt) errs.endsAt = 'Indica hasta cuándo estará disponible la promoción'
+    if (form.startsAt && form.endsAt && form.startsAt > form.endsAt) errs.endsAt = 'La fecha final debe ser posterior a la inicial'
     const features = featuresFromText(form.featuresText)
     if (features.length === 0) errs.featuresText = 'Añade al menos una característica (una por línea)'
     setErrors(errs)
@@ -76,19 +86,31 @@ export default function PlanManagement({ onToast }) {
       name: form.name.trim(),
       price: Number(form.price),
       durationDays: Number(form.durationDays),
+      planType: form.planType,
+      startsAt: form.startsAt,
+      endsAt: form.endsAt,
       description: form.description.trim(),
       features,
       highlighted: form.highlighted,
       active: form.active,
     }
-    await savePlan(plan)
+    try {
+      await savePlan(plan)
+    } catch (error) {
+      setErrors({ submit: error.message || 'No se pudo guardar el plan en Supabase.' })
+      return
+    }
     onToast?.(editing === 'new' ? 'Plan creado correctamente.' : 'Plan actualizado correctamente.')
     close()
   }
 
   const handleToggle = async (plan) => {
-    await togglePlan(plan.id)
-    onToast?.(plan.active ? 'Plan desactivado.' : 'Plan activado.')
+    try {
+      await togglePlan(plan.id)
+      onToast?.(plan.active ? 'Plan desactivado.' : 'Plan activado.')
+    } catch (error) {
+      onToast?.(error.message || 'No se pudo actualizar el plan.', 'error')
+    }
   }
 
   const inputClass =
@@ -108,16 +130,25 @@ export default function PlanManagement({ onToast }) {
             Precios, duración, características y visibilidad de los planes de membresía.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openNew}
-          className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
-        >
-          <Plus className="h-4 w-4" />
-          Nuevo plan
-        </button>
+        {section === 'plans' && (
+          <button
+            type="button"
+            onClick={openNew}
+            className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo plan
+          </button>
+        )}
       </div>
 
+      <div className="flex gap-2 border-b border-line pb-3">
+        <button type="button" onClick={() => setSection('plans')} aria-pressed={section === 'plans'} className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${section === 'plans' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}>Planes y promociones</button>
+        <button type="button" onClick={() => setSection('inventory')} aria-pressed={section === 'inventory'} className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${section === 'inventory' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}>Inventario POS</button>
+      </div>
+
+      {section === 'inventory' ? <InventoryManagement onToast={onToast} /> : (
+      <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {plans.map((plan) => (
           <article
@@ -131,6 +162,9 @@ export default function PlanManagement({ onToast }) {
                 <h3 className="font-display text-lg font-semibold uppercase text-white">
                   {plan.name}
                 </h3>
+                <span className="mt-1 inline-block rounded-md border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                  {plan.planType === 'promotion' ? 'Promoción' : plan.planType === 'day_pass' ? 'Pase diario' : 'Plan regular'}
+                </span>
                 <p className="text-xs text-muted">{plan.description || plan.tagline}</p>
               </div>
               <span
@@ -151,6 +185,7 @@ export default function PlanManagement({ onToast }) {
               <span className="mb-1 text-sm text-muted">{plan.period}</span>
             </div>
             <p className="mt-1 text-xs text-muted">Duración: {plan.durationDays} días</p>
+            {(plan.startsAt || plan.endsAt) && <p className="mt-1 text-xs text-muted">Vigencia: {plan.startsAt || 'Desde su activación'} – {plan.endsAt || 'Sin fecha final'}</p>}
 
             <ul className="mt-4 space-y-1.5 border-t border-line pt-4">
               {(plan.features || []).slice(0, 4).map((feature) => (
@@ -240,6 +275,37 @@ export default function PlanManagement({ onToast }) {
           </div>
 
           <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">Tipo de plan</label>
+            <select
+              value={form.planType}
+              onChange={(event) => setForm((current) => ({
+                ...current,
+                planType: event.target.value,
+                durationDays: event.target.value === 'day_pass' ? 1 : current.durationDays,
+                startsAt: event.target.value === 'standard' ? '' : current.startsAt,
+                endsAt: event.target.value === 'standard' ? '' : current.endsAt,
+              }))}
+              className={inputClass}
+            >
+              <option value="standard">Plan regular</option>
+              <option value="promotion">Promoción temporal</option>
+              <option value="day_pass">Pase diario (Day Pass)</option>
+            </select>
+          </div>
+
+          {form.planType !== 'standard' && (
+            <div className="grid grid-cols-2 gap-4">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted">Disponible desde
+                <input type="date" value={form.startsAt} onChange={set('startsAt')} className={`${inputClass} mt-1.5`} />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted">Disponible hasta
+                <input type="date" value={form.endsAt} onChange={set('endsAt')} className={`${inputClass} mt-1.5`} />
+                {errText('endsAt')}
+              </label>
+            </div>
+          )}
+
+          <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">
               Descripción
             </label>
@@ -296,8 +362,11 @@ export default function PlanManagement({ onToast }) {
               Cancelar
             </button>
           </div>
+          {errors.submit && <p role="alert" className="text-xs text-red-400">{errors.submit}</p>}
         </form>
       </Modal>
+      </>
+      )}
     </div>
   )
 }

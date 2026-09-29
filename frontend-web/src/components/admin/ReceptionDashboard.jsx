@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Banknote,
@@ -12,7 +12,8 @@ import {
 import Modal from '../ui/Modal'
 import { METODOS_PAGO, todayISO } from '../../data/adminData'
 import { getMembershipStatus } from '../../lib/membershipStatus'
-import { appendCashOperation, getActiveCashShift, getCashOperations } from '../../services/receptionCashService'
+import { appendCashOperation, getCashOperations } from '../../services/receptionCashService'
+import { loadCashShiftTransactions, loadCurrentCashShift, recordCashExpense } from '../../services/cashRegisterService'
 
 function readCashEntries() {
   return getCashOperations()
@@ -129,16 +130,36 @@ export default function ReceptionDashboard({ clients, attendance, onNewClient, o
     () => cashEntries.filter((entry) => entry.date === today),
     [cashEntries, today]
   )
-  const activeShift = getActiveCashShift()
+  const [activeShift, setActiveShift] = useState(null)
+  const [shiftTransactions, setShiftTransactions] = useState([])
+  const [localShift, setLocalShift] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    loadCurrentCashShift()
+      .then(async (result) => {
+        if (!mounted) return
+        setActiveShift(result.shift)
+        setLocalShift(result.local)
+        setShiftTransactions(result.shift ? await loadCashShiftTransactions(result.shift.id, result.local) : [])
+      })
+      .catch(() => {
+        if (mounted) setActiveShift(null)
+      })
+    return () => { mounted = false }
+  }, [])
   const cashSummary = useMemo(() => todayEntries.reduce((summary, entry) => {
     if (entry.type === 'sale') summary.sales += entry.amount
     else summary.expenses += entry.amount
     return summary
   }, { sales: 0, expenses: 0 }), [todayEntries])
-  const cashOnly = todayEntries.filter((entry) => entry.shiftId === activeShift?.id).reduce((summary, entry) => {
-    if (entry.method !== 'efectivo') return summary
-    if (entry.type === 'sale') summary.sales += entry.amount
-    if (entry.type === 'expense') summary.expenses += entry.amount
+  const cashOnly = (localShift
+    ? todayEntries.filter((entry) => entry.shiftId === activeShift?.id)
+    : shiftTransactions).reduce((summary, entry) => {
+    if ((entry.method || entry.payment_method) !== 'efectivo') return summary
+    const type = entry.type || entry.transaction_type
+    if (type === 'sale') summary.sales += Number(entry.amount) || 0
+    if (type === 'expense') summary.expenses += Number(entry.amount) || 0
     return summary
   }, { sales: 0, expenses: 0 })
   const currentCash = Number(activeShift?.openingCash || 0) + cashOnly.sales - cashOnly.expenses
@@ -177,18 +198,39 @@ export default function ReceptionDashboard({ clients, attendance, onNewClient, o
     return [...expiredCheckIns, ...birthdays]
   }, [attendance, clients, today])
 
-  const saveCashEntry = (entry) => {
-    const shift = getActiveCashShift()
+  const saveCashEntry = async (entry) => {
+    const currentShift = await loadCurrentCashShift()
+    const shift = currentShift.shift
     if (!shift) {
       onToast('Abre un turno en Control de Caja antes de registrar movimientos.', 'error')
       setEntryType(null)
       return
     }
-    const nextEntry = appendCashOperation({ ...entry, date: today, time: new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }), shiftId: shift.id })
-    const nextEntries = [nextEntry, ...cashEntries]
-    setCashEntries(nextEntries)
-    setEntryType(null)
-    onToast(`${entry.type === 'sale' ? 'Venta' : 'Gasto'} registrado en la caja local.`)
+    try {
+      const savedExpense = await recordCashExpense({
+        shiftId: shift.id,
+        description: entry.description,
+        amount: entry.amount,
+        method: entry.method,
+        local: currentShift.local,
+      })
+      const nextEntry = appendCashOperation({
+        ...(savedExpense.operation || {}),
+        ...entry,
+        type: 'expense',
+        date: today,
+        time: new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
+        shiftId: shift.id,
+        method: entry.method,
+      })
+      setShiftTransactions((current) => [{ ...nextEntry, transaction_type: 'expense', payment_method: entry.method }, ...current])
+      const nextEntries = [nextEntry, ...cashEntries]
+      setCashEntries(nextEntries)
+      setEntryType(null)
+      onToast(`${entry.type === 'sale' ? 'Venta' : 'Gasto'} registrado en la caja del turno.`)
+    } catch (error) {
+      onToast(error.message || 'No se pudo registrar el gasto en la caja.', 'error')
+    }
   }
 
   return (
@@ -208,7 +250,7 @@ export default function ReceptionDashboard({ clients, attendance, onNewClient, o
         <div className="rounded-xl border border-line bg-surface p-5">
           <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted"><Wallet className="h-4 w-4 text-accent" /> Caja actual</p>
           <p className="mt-2 font-display text-2xl font-bold text-white">{money(currentCash)}</p>
-          <p className="mt-1 text-xs text-muted">Saldo en efectivo del turno</p>
+            <p className="mt-1 text-xs text-muted">{activeShift ? 'Saldo en efectivo del turno' : 'Abre un turno para iniciar caja'}</p>
         </div>
         <div className="rounded-xl border border-line bg-surface p-5">
           <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted"><Banknote className="h-4 w-4 text-volt" /> Ventas del día</p>

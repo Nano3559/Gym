@@ -32,7 +32,7 @@ export default function useAdminClients() {
       // 1) Todos los usuarios registrados (profiles), el catálogo de planes y las
       //    membresías para calcular fechas de inicio/vencimiento.
       const [perfilesRes, planesRes, membresiasRes] = await Promise.all([
-        supabase.from('profiles').select('id, nombre, apellido, ci, telefono, fecha_nacimiento, plan_id'),
+        supabase.from('profiles').select('id, nombre, apellido, ci, telefono, email, fecha_nacimiento, plan_id'),
         supabase.from('plans').select('id, codigo, nombre'),
         supabase.from('memberships').select('user_id, plan_id, fecha_inicio, fecha_vencimiento, estado'),
       ])
@@ -69,6 +69,7 @@ export default function useAdminClients() {
           apellido: p.apellido || '',
           ci: p.ci || '',
           telefono: p.telefono || '',
+          email: p.email || '',
           fechaNacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '',
           plan: plan.plan,
           planNombre: plan.planNombre,
@@ -255,6 +256,35 @@ export default function useAdminClients() {
     return { ok: true, payments: data || [] }
   }, [])
 
+  const getClientHistory = useCallback(async (clientId) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, message: 'El historial completo requiere conexión a Supabase.', payments: [], attendance: [] }
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientId)) {
+      return { ok: true, payments: [], attendance: [] }
+    }
+    const [paymentsResult, attendanceResult] = await Promise.all([
+      supabase
+        .from('payments')
+        .select('id, monto, metodo_pago, estado_pago, transaction_id, qr_code_payload, created_at, plans(nombre)')
+        .eq('user_id', clientId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('asistencia')
+        .select('id, fecha, hora, plan, created_at')
+        .eq('user_id', clientId)
+        .order('fecha', { ascending: false })
+        .order('hora', { ascending: false }),
+    ])
+    const error = paymentsResult.error || attendanceResult.error
+    if (error) return { ok: false, message: error.message, payments: [], attendance: [] }
+    return {
+      ok: true,
+      payments: paymentsResult.data || [],
+      attendance: attendanceResult.data || [],
+    }
+  }, [])
+
   return {
     clients,
     attendance,
@@ -265,5 +295,6 @@ export default function useAdminClients() {
     updateClient,
     setMembershipFrozen,
     getClientPayments,
+    getClientHistory,
   }
 }

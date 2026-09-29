@@ -1,8 +1,10 @@
 import { Dumbbell, MapPin, Phone, Mail } from 'lucide-react'
 import { Facebook, Instagram, XIcon, YouTube } from './SocialIcons'
-import { brand, navLinks } from '../data/gymData'
+import { navLinks } from '../data/gymData'
+import { useGymSettings } from '../context/GymSettingsContext'
 
 export default function Footer({ onNavigate }) {
+  const { settings: brand } = useGymSettings()
   const year = new Date().getFullYear()
 
   return (

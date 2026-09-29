@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ClipboardCheck, Dumbbell, LayoutDashboard, LogIn, LogOut, Menu, User, X } from 'lucide-react'
-import { brand, navLinks } from '../data/gymData'
+import { navLinks } from '../data/gymData'
+import { useGymSettings } from '../context/GymSettingsContext'
 
 export default function Navbar({
   onInscribirme,
@@ -14,10 +15,12 @@ export default function Navbar({
   onOpenReception,
   onOpenAdmin,
 }) {
+  const { settings: brand } = useGymSettings()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const isStaff = isAdminUser || isReceptionUser
-  const staffLabel = isAdminUser ? 'Admin' : 'Recepción'
+  const staffLabel = isAdminUser ? 'Admin' : user?.app_metadata?.staff_role === 'trainer' ? 'Entrenador' : 'Recepción'
+  const staffPanelLabel = isAdminUser ? 'Panel Admin' : user?.app_metadata?.staff_role === 'trainer' ? 'Panel Entrenador' : 'Panel Recepción'
   const displayName = isStaff ? staffLabel : user?.nombre || 'Cliente'
 
   useEffect(() => {
@@ -94,7 +97,7 @@ export default function Navbar({
               className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
             >
               <ClipboardCheck className="h-4 w-4" />
-              Panel Recepción
+              {staffPanelLabel}
             </button>
           )}
           {user ? (
@@ -194,7 +197,7 @@ export default function Navbar({
                 className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white"
               >
                 <ClipboardCheck className="h-4 w-4" />
-                Panel Recepción
+                {staffPanelLabel}
               </button>
             )}
             {user ? (

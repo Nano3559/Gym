@@ -1,5 +1,6 @@
 import { ArrowRight, Camera, Dumbbell, Play, Star, Users, CalendarCheck } from 'lucide-react'
-import { brand, heroImage, trainers } from '../data/gymData'
+import { heroImage, trainers } from '../data/gymData'
+import { useGymSettings } from '../context/GymSettingsContext'
 
 export default function Hero({
   onInscribirme,
@@ -10,6 +11,7 @@ export default function Hero({
   canUsePostureVision,
   isAuthenticated,
 }) {
+  const { settings: brand } = useGymSettings()
   return (
     <section id="inicio" className="relative min-h-[100svh] overflow-hidden">
       <div className="absolute inset-0">

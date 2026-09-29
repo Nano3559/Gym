@@ -62,6 +62,7 @@ export function toClientShape(rc) {
     apellido,
     ci: rc.ci || '',
     telefono: rc.phone || '',
+    email: rc.email || '',
     fechaNacimiento: rc.birthDate || '',
     plan: displayToCode[planNombre] || '',
     planNombre,

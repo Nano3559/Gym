@@ -1,75 +1,105 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Banknote, CheckCircle2, CircleDollarSign, LockKeyhole, Printer, UnlockKeyhole } from 'lucide-react'
 import {
-  closeCashShift,
-  getActiveCashShift,
-  getCashOperations,
-  getCashShifts,
-  openCashShift,
-} from '../../services/receptionCashService'
+  closeCashRegisterShift,
+  loadCashShiftTransactions,
+  loadCurrentCashShift,
+  loadMyCashShifts,
+  openCashRegisterShift,
+} from '../../services/cashRegisterService'
 
 const money = (amount) => `${Number(amount).toLocaleString('es-BO', { minimumFractionDigits: 2 })} Bs.`
 const dateTime = (value) => new Date(value).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' })
 
 export default function CashControl({ onToast }) {
-  const [activeShift, setActiveShift] = useState(getActiveCashShift)
-  const [shifts, setShifts] = useState(getCashShifts)
+  const [activeShift, setActiveShift] = useState(null)
+  const [shifts, setShifts] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [localMode, setLocalMode] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [openingAmount, setOpeningAmount] = useState('')
   const [closingAmount, setClosingAmount] = useState('')
   const [error, setError] = useState('')
   const [lastCut, setLastCut] = useState(null)
+  const [saving, setSaving] = useState(false)
 
-  const shiftOperations = useMemo(() => {
-    if (!activeShift) return []
-    return getCashOperations().filter((operation) => operation.shiftId === activeShift.id)
-  }, [activeShift])
-  const cashTotals = useMemo(() => shiftOperations.reduce((totals, operation) => {
-    if (operation.method !== 'efectivo') return totals
-    if (operation.type === 'sale') totals.sales += Number(operation.amount) || 0
-    if (operation.type === 'expense') totals.expenses += Number(operation.amount) || 0
+  const refresh = async () => {
+    setLoading(true)
+    try {
+      const current = await loadCurrentCashShift()
+      setActiveShift(current.shift)
+      setLocalMode(current.local)
+      setShifts(await loadMyCashShifts(current.local))
+      setTransactions(current.shift ? await loadCashShiftTransactions(current.shift.id, current.local) : [])
+      setError('')
+    } catch (loadError) {
+      setError(loadError.message || 'No se pudo cargar el turno de caja.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    refresh()
+  }, [])
+
+  const cashTotals = useMemo(() => transactions.reduce((totals, operation) => {
+    if ((operation.payment_method || operation.method) !== 'efectivo') return totals
+    if ((operation.transaction_type || operation.type) === 'sale') totals.sales += Number(operation.amount) || 0
+    if ((operation.transaction_type || operation.type) === 'expense') totals.expenses += Number(operation.amount) || 0
     return totals
-  }, { sales: 0, expenses: 0 }), [shiftOperations])
+  }, { sales: 0, expenses: 0 }), [transactions])
   const expectedCash = activeShift
     ? Number(activeShift.openingCash) + cashTotals.sales - cashTotals.expenses
     : 0
 
-  const handleOpenShift = (event) => {
+  const handleOpenShift = async (event) => {
     event.preventDefault()
     const amount = Number(openingAmount)
     if (!Number.isFinite(amount) || amount < 0) {
       setError('Ingresa un monto inicial válido, igual o mayor que cero.')
       return
     }
-    const shift = openCashShift(amount)
-    if (!shift) {
-      setError('Ya existe un turno abierto en este navegador.')
-      return
+    setSaving(true)
+    try {
+      const result = await openCashRegisterShift(amount)
+      if (!result.shift) throw new Error('Ya existe un turno abierto.')
+      setLocalMode(result.local)
+      setActiveShift(result.shift)
+      setOpeningAmount('')
+      setError('')
+      onToast('Turno de caja abierto.')
+      await refresh()
+    } catch (openError) {
+      setError(openError.message || 'No se pudo abrir el turno de caja.')
+    } finally {
+      setSaving(false)
     }
-    setActiveShift(shift)
-    setShifts(getCashShifts())
-    setOpeningAmount('')
-    setError('')
-    onToast('Turno de caja abierto.')
   }
 
-  const handleCloseShift = (event) => {
+  const handleCloseShift = async (event) => {
     event.preventDefault()
     const amount = Number(closingAmount)
     if (!Number.isFinite(amount) || amount < 0) {
       setError('Ingresa el efectivo contado, igual o mayor que cero.')
       return
     }
-    const cut = closeCashShift(activeShift.id, amount, expectedCash)
-    if (!cut) {
-      setError('No se encontró el turno abierto para cerrar.')
-      return
+    setSaving(true)
+    try {
+      const result = await closeCashRegisterShift(activeShift.id, amount, expectedCash, localMode)
+      if (!result.shift) throw new Error('No se encontró el turno abierto para cerrar.')
+      setLastCut(result.shift)
+      setActiveShift(null)
+      setClosingAmount('')
+      setError('')
+      onToast('Corte de caja registrado.')
+      await refresh()
+    } catch (closeError) {
+      setError(closeError.message || 'No se pudo cerrar la caja.')
+    } finally {
+      setSaving(false)
     }
-    setLastCut(cut)
-    setActiveShift(null)
-    setShifts(getCashShifts())
-    setClosingAmount('')
-    setError('')
-    onToast('Corte de caja registrado.')
   }
 
   return (
@@ -79,7 +109,7 @@ export default function CashControl({ onToast }) {
         <p className="mt-1 text-xs text-muted">Apertura de turno, control de efectivo y corte de cierre.</p>
       </div>
 
-      {activeShift ? (
+      {loading ? <p className="text-sm text-muted">Consultando estado del turno...</p> : activeShift ? (
         <>
           <section className="flex flex-col gap-4 rounded-xl border border-volt/30 bg-volt/5 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -104,7 +134,7 @@ export default function CashControl({ onToast }) {
             <label className="block text-sm text-muted">Efectivo contado (Bs.)<input className="field mt-2" type="number" min="0" step="0.01" value={closingAmount} onChange={(event) => setClosingAmount(event.target.value)} required /></label>
             <div className="flex items-center justify-between rounded-lg border border-line bg-card px-4 py-3 text-sm"><span className="text-muted">Diferencia esperada</span><strong className="text-white">{closingAmount === '' ? 'Se calculará al cerrar' : money(Number(closingAmount) - expectedCash)}</strong></div>
             {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-            <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hover"><LockKeyhole className="h-4 w-4" /> Registrar cierre</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:opacity-50"><LockKeyhole className="h-4 w-4" /> {saving ? 'Procesando...' : 'Registrar cierre'}</button>
           </form>
         </>
       ) : (
@@ -115,7 +145,7 @@ export default function CashControl({ onToast }) {
           <form onSubmit={handleOpenShift} className="mt-5 space-y-4">
             <label className="block text-sm text-muted">Efectivo inicial (Bs.)<input className="field mt-2" type="number" min="0" step="0.01" value={openingAmount} onChange={(event) => setOpeningAmount(event.target.value)} required /></label>
             {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-            <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hover"><Banknote className="h-4 w-4" /> Abrir caja</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:opacity-50"><Banknote className="h-4 w-4" /> {saving ? 'Abriendo...' : 'Abrir caja'}</button>
           </form>
         </section>
       )}
@@ -149,7 +179,7 @@ export default function CashControl({ onToast }) {
           </ul>
         ) : <p className="mt-3 text-sm text-muted">Aún no hay cierres registrados.</p>}
       </section>
-      <p className="text-xs text-muted">Los turnos y movimientos se guardan localmente en este navegador; todavía no se sincronizan con una caja central.</p>
+      {localMode && <p className="text-xs text-muted">Los turnos se guardan localmente en este navegador; aplica las migraciones Supabase para centralizar la auditoría.</p>}
     </div>
   )
 }

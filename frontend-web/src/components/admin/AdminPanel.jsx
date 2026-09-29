@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Banknote, ClipboardCheck, Dumbbell, FileBarChart, LayoutDashboard, Settings2, ShoppingCart, Users, X } from 'lucide-react'
+import { Banknote, ClipboardCheck, Dumbbell, FileBarChart, LayoutDashboard, Settings2, ShoppingCart, Users, X, UserCog, SlidersHorizontal } from 'lucide-react'
 import useAdminClients from '../../hooks/useAdminClients'
 import AttendanceControl from './AttendanceControl'
 import ClientsManagement from './ClientsManagement'
@@ -9,11 +9,27 @@ import PlanManagement from './PlanManagement'
 import ReceptionDashboard from './ReceptionDashboard'
 import ReceptionPOS from './ReceptionPOS'
 import CashControl from './CashControl'
+import StaffManagement from './StaffManagement'
+import CashAudit from './CashAudit'
+import GlobalSettings from './GlobalSettings'
 
-export default function AdminPanel({ open, onClose, onToast, onNewClient, childDialogOpen = false, isAdminUser = false }) {
+function TrainerDashboard({ staffPermissions }) {
+  return (
+    <section className="max-w-2xl rounded-xl border border-line bg-surface p-6">
+      <h2 className="font-display text-lg font-semibold uppercase text-white">Espacio de entrenador</h2>
+      <p className="mt-2 text-sm text-muted">Tu acceso está limitado a las secciones autorizadas por administración.</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {staffPermissions.map((permission) => <span key={permission} className="rounded-md border border-line bg-card px-3 py-1.5 text-xs text-muted">{permission}</span>)}
+      </div>
+    </section>
+  )
+}
+
+export default function AdminPanel({ open, onClose, onToast, onNewClient, childDialogOpen = false, isAdminUser = false, staffRole = 'reception', staffPermissions = [] }) {
   const [tab, setTab] = useState('dashboard')
   const admin = useAdminClients()
   const isAdmin = isAdminUser
+  const can = (permission) => isAdmin || staffPermissions.includes(permission) || (!staffPermissions.length && staffRole === 'reception')
 
   useEffect(() => {
     if (!open) return undefined
@@ -66,7 +82,7 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
           </div>
 
           <nav className="flex gap-2" aria-label="Secciones del panel">
-            <button
+            {can('dashboard') && <button
               type="button"
               onClick={() => setTab('dashboard')}
               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
@@ -77,20 +93,22 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
             >
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('attendance')}
-              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                tab === 'attendance'
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-line text-muted hover:text-white'
-              }`}
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Control de Asistencia
-            </button>
-            <button
+            </button>}
+            {!isAdmin && can('attendance') && (
+              <button
+                type="button"
+                onClick={() => setTab('attendance')}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  tab === 'attendance'
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-line text-muted hover:text-white'
+                }`}
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Control de Asistencia
+              </button>
+            )}
+            {can('clients') && <button
               type="button"
               onClick={() => setTab('clients')}
               className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
@@ -101,23 +119,23 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
             >
               <Users className="h-4 w-4" />
               Gestión de Clientes
-            </button>
+            </button>}
             {!isAdmin && (
               <>
-                <button
+                {can('pos') && <button
                   type="button"
                   onClick={() => setTab('pos')}
                   className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'pos' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
                 >
                   <ShoppingCart className="h-4 w-4" /> POS
-                </button>
-                <button
+                </button>}
+                {can('cash') && <button
                   type="button"
                   onClick={() => setTab('cash')}
                   className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'cash' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
                 >
                   <Banknote className="h-4 w-4" /> Caja
-                </button>
+                </button>}
               </>
             )}
             {isAdmin && (
@@ -134,6 +152,21 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
                   <FileBarChart className="h-4 w-4" />
                   Reportes
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('staff')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'staff' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
+                ><UserCog className="h-4 w-4" /> Staff</button>
+                <button
+                  type="button"
+                  onClick={() => setTab('cashAudit')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'cashAudit' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
+                ><Banknote className="h-4 w-4" /> Auditoría de Caja</button>
+                <button
+                  type="button"
+                  onClick={() => setTab('settings')}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${tab === 'settings' ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-white'}`}
+                ><SlidersHorizontal className="h-4 w-4" /> Configuración</button>
                 <button
                   type="button"
                   onClick={() => setTab('plans')}
@@ -153,9 +186,17 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {tab === 'dashboard' ? (
+        {tab === 'staff' && isAdmin ? (
+          <StaffManagement onToast={onToast} />
+        ) : tab === 'cashAudit' && isAdmin ? (
+          <CashAudit />
+        ) : tab === 'settings' && isAdmin ? (
+          <GlobalSettings onToast={onToast} />
+        ) : tab === 'dashboard' && can('dashboard') ? (
           isAdmin ? (
             <AdminDashboard />
+          ) : staffRole === 'trainer' ? (
+            <TrainerDashboard staffPermissions={staffPermissions} />
           ) : (
             <ReceptionDashboard
               clients={admin.clients}
@@ -165,32 +206,34 @@ export default function AdminPanel({ open, onClose, onToast, onNewClient, childD
               onToast={onToast}
             />
           )
-        ) : tab === 'pos' && !isAdmin ? (
+        ) : tab === 'pos' && !isAdmin && can('pos') ? (
           <ReceptionPOS onToast={onToast} onOpenCashControl={() => setTab('cash')} />
-        ) : tab === 'cash' && !isAdmin ? (
+        ) : tab === 'cash' && !isAdmin && can('cash') ? (
           <CashControl onToast={onToast} />
-        ) : tab === 'attendance' ? (
+        ) : tab === 'attendance' && !isAdmin && can('attendance') ? (
           <AttendanceControl
             clients={admin.clients}
             attendance={admin.attendance}
             onRegisterAttendance={admin.registerAttendance}
             onToast={onToast}
           />
-        ) : tab === 'reports' && isAdmin ? (
-          <AdminReports />
-        ) : tab === 'plans' && isAdmin ? (
-          <PlanManagement onToast={onToast} />
-        ) : (
+        ) : tab === 'clients' && can('clients') ? (
           <ClientsManagement
             clients={admin.clients}
             onRenewMembership={admin.renewMembership}
             onUpdateClient={admin.updateClient}
             onSetMembershipFrozen={admin.setMembershipFrozen}
             onGetClientPayments={admin.getClientPayments}
+            onGetClientHistory={admin.getClientHistory}
             onNewClient={onNewClient}
             onToast={onToast}
+            isAdmin={isAdmin}
           />
-        )}
+        ) : tab === 'reports' && isAdmin ? (
+          <AdminReports />
+        ) : tab === 'plans' && isAdmin ? (
+          <PlanManagement onToast={onToast} />
+        ) : <p className="rounded-xl border border-line bg-surface p-6 text-sm text-muted">No tienes permiso para ver esta sección.</p>}
       </main>
     </div>
   )
