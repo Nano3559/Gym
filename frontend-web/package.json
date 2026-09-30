@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test": "node scripts/squat-analyzer.test.mjs",
+    "test:camera": "node scripts/camera-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@supabase/supabase-js": "^2.112.3",
     "lucide-react": "^1.32.0",
     "react": "^19.2.8",
