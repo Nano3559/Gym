@@ -1,36 +1,53 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, Flame, LoaderCircle, RotateCcw, ScanSearch, Upload } from 'lucide-react'
 import Modal from './ui/Modal'
-import { analyzeFoodImage } from '../services/geminiVisionService'
+import useCamera from '../hooks/useCamera'
+import { blobToFile, optimizeImageSource } from '../lib/imageOptimize'
+import { analyzeFoodImage, isGeminiConfigured } from '../services/geminiVisionService'
+
+const PREVIEW_MAX_EDGE = 640
 
 export default function VisionModal({ open, onClose }) {
   const uploadInputRef = useRef(null)
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
+  const abortRef = useRef(null)
+  const shotCountRef = useRef(0)
+  const [cameraActive, setCameraActive] = useState(false)
+  const { videoRef, status: cameraStatus, error: cameraError, setError: setCameraError, stop } = useCamera({
+    facingMode: 'environment',
+    active: open && cameraActive,
+  })
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState('')
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [cameraOpen, setCameraOpen] = useState(false)
+  const [geminiReady] = useState(() => isGeminiConfigured())
 
   useEffect(() => {
     if (!preview) return undefined
     return () => URL.revokeObjectURL(preview)
   }, [preview])
 
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-    setCameraOpen(false)
-  }
-
+  // Libera cámara y peticiones en vuelo al desmontar el modal.
   useEffect(() => () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-  }, [])
+    abortRef.current?.abort()
+    stop()
+  }, [stop])
+
+  const reset = () => {
+    abortRef.current?.abort()
+    stop()
+    setCameraActive(false)
+    setFile(null)
+    setPreview('')
+    setResult(null)
+    setError('')
+    setLoading(false)
+  }
 
   const selectFile = (nextFile) => {
     if (!nextFile) return
+    abortRef.current?.abort()
     setFile(nextFile)
     setPreview(URL.createObjectURL(nextFile))
     setResult(null)
@@ -42,77 +59,78 @@ export default function VisionModal({ open, onClose }) {
     event.target.value = ''
   }
 
-  const startCamera = async () => {
+  const openCamera = () => {
     setError('')
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Tu navegador no permite abrir la cámara. Usa “Subir foto”.')
-      return
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      })
-      streamRef.current = stream
-      setCameraOpen(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-    } catch {
-      setError('No se pudo abrir la cámara. Concede permiso al navegador o usa “Subir foto”.')
-    }
+    setCameraError('')
+    setCameraActive(true)
   }
 
-  const capturePhoto = () => {
+  const closeCamera = () => {
+    stop()
+    setCameraActive(false)
+  }
+
+  // Captura UNA sola imagen y la optimiza antes de cualquier análisis.
+  const capturePhoto = async () => {
     const video = videoRef.current
     if (!video?.videoWidth || !video.videoHeight) {
       setError('La cámara todavía no está lista. Inténtalo de nuevo.')
       return
     }
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        setError('No se pudo capturar la foto.')
-        return
-      }
-      selectFile(new File([blob], `comida-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-      stopCamera()
-    }, 'image/jpeg', 0.9)
+
+    const analysisBlob = await optimizeImageSource(video, { maxEdge: 1024, quality: 0.72 })
+    if (!analysisBlob) {
+      setError('No se pudo capturar la foto.')
+      return
+    }
+
+    const previewBlob = await optimizeImageSource(video, { maxEdge: PREVIEW_MAX_EDGE, quality: 0.6 })
+    shotCountRef.current += 1
+    const analysisFile = blobToFile(analysisBlob, `comida-analisis-${shotCountRef.current}.jpg`)
+
+    setFile(analysisFile)
+    setPreview(URL.createObjectURL(blobToFile(previewBlob || analysisBlob, `comida-${shotCountRef.current}.jpg`)))
+    setResult(null)
+    setError('')
+    closeCamera()
+
+    // El análisis arranca solo con la foto ya capturada, nunca por frame.
+    void handleAnalyzeFile(analysisFile)
   }
 
-  const handleAnalyze = async () => {
-    if (!file) return
+  const handleAnalyzeFile = async (targetFile) => {
+    if (!targetFile) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setError('')
     try {
-      setResult(await analyzeFoodImage(file))
+      const analysis = await analyzeFoodImage(targetFile, { signal: controller.signal })
+      if (!controller.signal.aborted) setResult(analysis)
     } catch (analysisError) {
+      if (analysisError.name === 'AbortError') return
       setError(analysisError.message)
     } finally {
-      setLoading(false)
+      if (abortRef.current === controller) {
+        abortRef.current = null
+        setLoading(false)
+      }
     }
   }
 
-  const reset = () => {
-    stopCamera()
-    setFile(null)
-    setPreview('')
-    setResult(null)
-    setError('')
-  }
+  const handleAnalyze = useCallback(() => {
+    if (!file || loading) return
+    void handleAnalyzeFile(file)
+  }, [file, loading])
 
   const handleClose = () => {
     reset()
     onClose()
   }
+
+  const showCamera = cameraActive && (cameraStatus === 'starting' || cameraStatus === 'ready')
 
   return (
     <Modal open={open} onClose={handleClose} title="Analizar comida" maxWidth="max-w-2xl">
@@ -126,15 +144,9 @@ export default function VisionModal({ open, onClose }) {
           </p>
         </div>
 
-        <input
-          ref={uploadInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFile}
-        />
+        <input ref={uploadInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
 
-        {cameraOpen ? (
+        {showCamera ? (
           <div className="overflow-hidden rounded-2xl border border-accent/50 bg-black">
             <video
               ref={videoRef}
@@ -147,7 +159,7 @@ export default function VisionModal({ open, onClose }) {
             <div className="flex flex-wrap justify-end gap-3 p-4">
               <button
                 type="button"
-                onClick={stopCamera}
+                onClick={closeCamera}
                 className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-muted transition hover:text-white"
               >
                 Cancelar
@@ -155,9 +167,15 @@ export default function VisionModal({ open, onClose }) {
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+                disabled={cameraStatus !== 'ready'}
+                className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60"
               >
-                <Camera className="h-4 w-4" /> Capturar foto
+                {cameraStatus === 'starting' ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+                {cameraStatus === 'starting' ? 'Abriendo cámara...' : 'Capturar foto'}
               </button>
             </div>
           </div>
@@ -165,7 +183,7 @@ export default function VisionModal({ open, onClose }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
-              onClick={startCamera}
+              onClick={openCamera}
               className="flex min-h-36 flex-col items-center justify-center gap-3 rounded-2xl border border-accent/50 bg-accent/10 px-5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent/20"
             >
               <Camera className="h-8 w-8 text-accent" />
@@ -198,19 +216,32 @@ export default function VisionModal({ open, onClose }) {
                 className="btn-sheen inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60"
               >
                 {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
-                {loading ? 'Analizando...' : 'Analizar plato'}
+                {loading ? 'Analizando comida...' : result ? 'Analizar de nuevo' : 'Analizar plato'}
               </button>
             </div>
           </div>
         )}
 
+        {cameraError && (
+          <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{cameraError}</p>
+        )}
+        {!geminiReady && (
+          <p className="rounded-xl border border-volt/30 bg-volt/5 px-4 py-3 text-sm text-volt">
+            Falta configurar VITE_GEMINI_API_KEY en frontend-web/.env.local para activar el análisis.
+          </p>
+        )}
+        {loading && (
+          <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-white" aria-live="polite">
+            Analizando comida...
+          </p>
+        )}
         {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
 
         {result && (
           <section className="space-y-4 rounded-2xl border border-volt/30 bg-volt/5 p-5" aria-live="polite">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-volt">Resultado estimado</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-volt">Análisis completado</p>
                 <h4 className="mt-1 font-display text-2xl font-bold uppercase text-white">{result.dishName}</h4>
               </div>
               <div className="flex items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-white">

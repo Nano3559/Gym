@@ -1,5 +1,8 @@
+import { optimizeImageSource } from '../lib/imageOptimize'
+
 const GEMINI_MODEL = 'gemini-3.6-flash'
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 const ANALYSIS_PROMPT = `Analiza esta imagen de comida como nutricionista. Devuelve únicamente JSON válido, sin markdown, con esta forma exacta:
 {
@@ -12,12 +15,12 @@ const ANALYSIS_PROMPT = `Analiza esta imagen de comida como nutricionista. Devue
 }
 Estima las calorías de toda la porción visible. No inventes precisión: usa números enteros aproximados y explica en notes los ingredientes o cantidades que no puedan verse.`
 
-function fileToBase64(file) {
+function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result).split(',')[1])
     reader.onerror = () => reject(new Error('No se pudo leer la imagen.'))
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(blob)
   })
 }
 
@@ -30,7 +33,11 @@ function parseAnalysis(text) {
   }
 }
 
-export async function analyzeFoodImage(file) {
+export function isGeminiConfigured() {
+  return Boolean(import.meta.env.VITE_GEMINI_API_KEY)
+}
+
+export async function analyzeFoodImage(file, { signal, maxEdge = 1024, quality = 0.72 } = {}) {
   if (!file?.type.startsWith('image/')) {
     throw new Error('Selecciona una imagen válida.')
   }
@@ -43,28 +50,36 @@ export async function analyzeFoodImage(file) {
     throw new Error('Falta configurar VITE_GEMINI_API_KEY en frontend-web/.env.local.')
   }
 
-  const base64Image = await fileToBase64(file)
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: ANALYSIS_PROMPT },
-              { inlineData: { mimeType: file.type, data: base64Image } },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
+  // Se envía una sola imagen reducida y comprimida: menos bytes que subir
+  // significa menor tiempo de espera en cada análisis.
+  const optimizedBlob = await optimizeImageSource(file, { maxEdge, quality })
+  const imageBlob = optimizedBlob && optimizedBlob.size < file.size ? optimizedBlob : file
+  const base64Image = await blobToBase64(imageBlob)
+
+  const response = await fetch(`${GEMINI_ENDPOINT}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: ANALYSIS_PROMPT },
+            { inlineData: { mimeType: imageBlob.type || 'image/jpeg', data: base64Image } },
+          ],
         },
-      }),
-    }
-  )
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 700,
+      },
+    }),
+  })
+
+  if (signal?.aborted) {
+    throw new DOMException('Análisis cancelado', 'AbortError')
+  }
 
   if (!response.ok) {
     let message = 'No se pudo analizar la imagen.'
