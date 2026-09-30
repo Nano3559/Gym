@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test": "node scripts/squat-analyzer.test.mjs",
     "test:camera": "node scripts/camera-smoke.mjs",
+    "test:food": "node scripts/food-analysis-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
