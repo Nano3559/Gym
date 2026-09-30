@@ -8,6 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Imágenes de muestra usadas solo por las pruebas de cámara (scripts/camera-smoke.mjs)
+tmp-samples
 dist
 dist-ssr
 *.local
