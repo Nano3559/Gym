@@ -17,6 +17,7 @@ import PaymentModal from './components/PaymentModal'
 import LoginModal from './components/LoginModal'
 import Toast from './components/Toast'
 import VisionModal from './components/VisionModal'
+import SquatCoachModal from './components/SquatCoachModal'
 import AdminPanel from './components/admin/AdminPanel'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlansProvider, usePlans } from './context/PlansContext'
@@ -55,6 +56,7 @@ function AppContent() {
   const [extraBooked, setExtraBooked] = useState({})
   const [toast, setToast] = useState(null)
   const [isVisionOpen, setVisionOpen] = useState(false)
+  const [isTrainerOpen, setTrainerOpen] = useState(false)
 
   // Módulo 6: panel de recepción / administración.
   const [isAdminOpen, setAdminOpen] = useState(false)
@@ -357,6 +359,7 @@ function AppContent() {
           onInscribirme={handleInscribirme}
           onVerPlanes={handleVerPlanes}
           onOpenVision={() => setVisionOpen(true)}
+          onOpenTrainer={() => setTrainerOpen(true)}
           isAuthenticated={Boolean(currentUser)}
         />
         <Marquee />
@@ -432,6 +435,8 @@ function AppContent() {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <VisionModal open={isVisionOpen} onClose={() => setVisionOpen(false)} />
+
+      <SquatCoachModal open={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
 
       {/* Módulo 6: panel de recepción (solo visible para la cuenta autorizada). */}
       <AdminPanel
