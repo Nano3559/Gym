@@ -1,16 +1,39 @@
-# React + Vite
+# frontend-web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Portal web del gimnasio (React + Vite + Tailwind v4 + Supabase).
 
-Currently, two official plugins are available:
+## Módulos con cámara
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Analizador nutricional (`VisionModal`)
 
-## React Compiler
+Abre la cámara con `navigator.mediaDevices.getUserMedia`, captura **una sola** foto al
+pulsar "Capturar foto", la reduce a 1024 px y la comprime a JPEG antes de enviarla a
+Gemini. Mientras espera, la interfaz muestra "Analizando comida..."; al terminar,
+"Análisis completado". Si el usuario vuelve a capturar, se cancela la petición en
+vuelo (`AbortController`) y no quedan solicitudes duplicadas.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Configuración: define `VITE_GEMINI_API_KEY` en `frontend-web/.env.local`.
 
-## Expanding the Oxlint configuration
+### Entrenador de ejercicios (`SquatCoachModal`)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Detección de pose **local** con `@mediapipe/tasks-vision` (modelo `pose_landmarker_lite`).
+Ningún frame de video sale del navegador. A partir de los landmarks se calcula el ángulo
+`cadera → rodilla → tobillo` (con suavizado por media móvil) y una máquina de estados
+`IDLE → STANDING → DESCENDING → BOTTOM → ASCENDING → STANDING` cuenta una repetición
+solo si el ciclo se completa con profundidad suficiente.
+
+El modelo se sirve desde `public/mediapipe/pose_landmarker_lite.task` y los binarios wasm
+se resuelven en `/mediapipe/wasm` (Vite los expone desde `node_modules` en desarrollo y
+los copia a `dist/` en build).
+
+La cámara se libera al cerrar el modal, al desmontar el componente y al ocultar la pestaña.
+
+## Comandos
+
+```bash
+npm install
+npm run dev        # servidor de desarrollo
+npm run build      # build de producción
+npm run lint       # oxlint
+npm test           # pruebas de la máquina de estados de sentadillas
+```
