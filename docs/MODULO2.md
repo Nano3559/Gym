@@ -49,8 +49,23 @@ Los scripts SQL están en `supabase/migrations/` y son idempotentes/reproducible
 | 2 | `20260820000002_rls_policies.sql` | Row Level Security y policies |
 | 3 | `20260820000003_functions_realtime.sql` | RPC `reservar_clase()`, trigger de cupos (`reservas_count`) y publicación Realtime |
 | 4 | `20260820000004_seed.sql` | Planes del Módulo 1 + función `generar_clases()` + calendario inicial de 6 semanas |
+| 5 | `20260829000005_payments.sql` | Pagos, membresías y renovación por RPC |
+| 6 | `20261005000006_reception_pos.sql` | Catálogo POS, ventas atómicas, gastos y acceso de staff a perfiles/membresías |
+| 7 | `20261006000007_admin_operations.sql` | Caja, asistencias, roles, historial, planes promocionales, fotos y configuración |
+
+> **Importante:** no ejecutes la migración 6 aisladamente en un proyecto nuevo. `profiles` se crea en la migración 1 y `memberships` en la 5; la migración 7 añade sus políticas administrativas. Si aparece `relation "public.profiles" does not exist`, aplica primero las migraciones 1 a 5 en orden y luego continúa con la 6 y la 7. No crees `profiles` manualmente: la tabla y su trigger pertenecen a la migración inicial.
 
 > La función `generar_clases(6)` crea las sesiones de clases de las próximas 6 semanas a partir de la plantilla semanal del Módulo 1 (`gymData.js`). Cuando el calendario se acabe, vuelve a ejecutar `select public.generar_clases(6);` en el SQL Editor.
+
+### Operaciones de administración y personal
+
+Después de aplicar las migraciones, despliega la función que crea cuentas de personal con privilegios de servidor:
+
+```powershell
+supabase functions deploy manage-staff
+```
+
+La función usa los secretos gestionados de Supabase `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`; no guardes la clave `service_role` en el frontend. Las credenciales de personal se crean desde **Panel Administrativo → Staff**. En modo demo sin Supabase, operaciones POS, caja, gastos, configuración y staff se conservan en el navegador y no se comparten entre dispositivos.
 
 ## 5. Configuración de Auth
 

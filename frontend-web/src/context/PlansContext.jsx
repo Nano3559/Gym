@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { plans as seedPlans } from '../data/gymData'
 
 const PlansContext = createContext(null)
+const LOCAL_PLANS_KEY = 'gym_admin_plans'
 
 // Normaliza un plan de cualquier fuente a la forma canónica de la UI.
 function normalize(p) {
@@ -15,26 +16,44 @@ function normalize(p) {
     tagline: p.tagline || p.description || p.descripcion || '',
     description: p.description || p.descripcion || p.tagline || '',
     durationDays: Number(p.durationDays ?? p.duracion_dias ?? 30),
-    features: Array.isArray(p.features) ? p.features : [],
-    highlighted: Boolean(p.highlighted),
+    features: Array.isArray(p.features) ? p.features : Array.isArray(p.caracteristicas) ? p.caracteristicas : [],
+    highlighted: Boolean(p.highlighted ?? p.destacado),
     cta: p.cta || 'Elegir este plan',
     active: p.active !== false,
+    type: p.type || p.tipo || 'membresia',
+    startDate: p.startDate || p.fecha_inicio || '',
+    endDate: p.endDate || p.fecha_fin || '',
+    quantityIncluded: Number(p.quantityIncluded ?? p.cantidad_incluida ?? 1),
   }
 }
 
 export function PlansProvider({ children }) {
-  const [plans, setPlans] = useState(() => seedPlans.map(normalize))
+  const [plans, setPlans] = useState(() => {
+    const local = window.localStorage.getItem(LOCAL_PLANS_KEY)
+    if (!local) return seedPlans.map(normalize)
+    const overrides = JSON.parse(local).map(normalize)
+    const byId = new Map(overrides.map((plan) => [plan.id, plan]))
+    const merged = seedPlans.map(normalize).map((plan) => byId.get(plan.id) || plan)
+    return [...merged, ...overrides.filter((plan) => !seedPlans.some((seed) => normalize(seed).id === plan.id))]
+  })
+  const [loadError, setLoadError] = useState('')
 
   const loadRemote = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return
     try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw sessionError
+      if (!sessionData?.session) return
       const { data, error } = await supabase.from('plans').select('*')
       if (error) throw error
-      if (Array.isArray(data) && data.length) {
-        setPlans(data.map((p) => normalize({ ...p, id: p.codigo || p.id, name: p.nombre })))
-      }
-    } catch {
-      // Fallback: se conserva el catálogo local.
+      setPlans((data || []).map((p) => normalize({
+        ...p,
+        id: p.codigo || p.id,
+        name: p.nombre,
+      })))
+      setLoadError('')
+    } catch (error) {
+      setLoadError(error.message)
     }
   }, [])
 
@@ -44,11 +63,15 @@ export function PlansProvider({ children }) {
     loadRemote()
   }, [loadRemote])
 
-  // Persistencia best-effort; ante cualquier error se conserva el estado local.
   const persist = useCallback(async (plan) => {
-    if (!isSupabaseConfigured || !supabase || !plan.id) return
-    try {
-      await supabase.from('plans').upsert(
+    if (!plan.id) return
+    const { data: sessionData, error: sessionError } =
+      isSupabaseConfigured && supabase
+        ? await supabase.auth.getSession()
+        : { data: { session: null }, error: null }
+    if (sessionError) throw sessionError
+    if (sessionData?.session && supabase) {
+      const { error } = await supabase.from('plans').upsert(
         {
           codigo: plan.id,
           nombre: plan.name,
@@ -56,23 +79,33 @@ export function PlansProvider({ children }) {
           descripcion: plan.description || plan.tagline,
           duracion_dias: plan.durationDays,
           caracteristicas: plan.features,
+          destacado: plan.highlighted,
           activo: plan.active,
+          tipo: plan.type,
+          fecha_inicio: plan.startDate || null,
+          fecha_fin: plan.endDate || null,
+          cantidad_incluida: plan.quantityIncluded,
         },
         { onConflict: 'codigo' }
       )
-    } catch {
-      // Se ignora: el cambio ya quedó reflejado en el estado local.
+      if (error) throw error
+    } else {
+      const current = JSON.parse(window.localStorage.getItem(LOCAL_PLANS_KEY) || '[]')
+      const next = current.some((item) => item.id === plan.id)
+        ? current.map((item) => item.id === plan.id ? plan : item)
+        : [...current, plan]
+      window.localStorage.setItem(LOCAL_PLANS_KEY, JSON.stringify(next))
     }
   }, [])
 
   const savePlan = useCallback(
     async (planData) => {
       const plan = normalize(planData)
+      await persist(plan)
       setPlans((prev) => {
         const exists = prev.some((p) => p.id === plan.id)
         return exists ? prev.map((p) => (p.id === plan.id ? plan : p)) : [...prev, plan]
       })
-      await persist(plan)
       return plan
     },
     [persist]
@@ -90,11 +123,18 @@ export function PlansProvider({ children }) {
   const value = useMemo(
     () => ({
       plans,
-      activePlans: plans.filter((p) => p.active),
+      activePlans: plans.filter((p) => {
+        const now = new Date()
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        return p.active
+          && (!p.startDate || p.startDate <= today)
+          && (!p.endDate || p.endDate >= today)
+      }),
+      loadError,
       savePlan,
       togglePlan,
     }),
-    [plans, savePlan, togglePlan]
+    [plans, loadError, savePlan, togglePlan]
   )
 
   return <PlansContext.Provider value={value}>{children}</PlansContext.Provider>

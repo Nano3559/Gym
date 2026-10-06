@@ -174,13 +174,15 @@ class _PlansScreenState extends State<PlansScreen> {
                           ? null
                           : () async {
                               setSheetState(() => procesando = true);
+                              final navigator = Navigator.of(context);
+                              final messenger = ScaffoldMessenger.maybeOf(context);
                               final res = await SupabaseService.suscribirPlan(
                                 plan: plan,
                                 metodoPago: metodoSeleccionado,
                               );
                               if (!mounted) return;
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(this.context).showSnackBar(
+                              navigator.pop();
+                              messenger?.showSnackBar(
                                 SnackBar(
                                   content: Text(res['message'] as String),
                                   backgroundColor: res['ok'] == true

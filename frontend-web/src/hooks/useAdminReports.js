@@ -4,16 +4,17 @@ import { seedClients, shiftDate } from '../data/adminData'
 import { weeklyClasses } from '../data/gymData'
 import { getMembershipStatus } from '../lib/membershipStatus'
 
-export const METHOD_KEYS = ['efectivo', 'qr', 'transferencia', 'tarjeta']
+export const METHOD_KEYS = ['efectivo', 'qr', 'yape_plin', 'transferencia', 'tarjeta']
 
 export const METHOD_NAMES = {
   efectivo: 'Efectivo',
   qr: 'QR',
+  yape_plin: 'Yape/Plin',
   transferencia: 'Transferencia',
   tarjeta: 'Tarjeta',
 }
 
-const PAY_METHODS = ['qr', 'efectivo', 'transferencia', 'tarjeta']
+const PAY_METHODS = ['qr', 'efectivo', 'yape_plin', 'transferencia', 'tarjeta']
 const CLIENT_NAMES = [
   'Carlos Pérez',
   'María López',

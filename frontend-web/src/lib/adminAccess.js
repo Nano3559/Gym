@@ -8,5 +8,7 @@ export const ADMIN_PASSWORD = '123456'
 // Devuelve true solo si el correo coincide con el de la cuenta autorizada.
 export function isAdminUser(user) {
   const email = user?.email || user?.correo || user?.user_metadata?.email
+  const role = user?.role || user?.app_metadata?.gym_role || user?.app_metadata?.role
+  if (role) return role === 'admin'
   return Boolean(email && String(email).toLowerCase() === ADMIN_EMAIL)
 }

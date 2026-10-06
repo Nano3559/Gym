@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search,
   User,
@@ -26,23 +26,46 @@ const STATUS_STYLES = {
     dot: 'bg-red-500',
     allowed: false,
   },
+  congelada: {
+    badge: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+    dot: 'bg-amber-400',
+    allowed: false,
+  },
+}
+
+function getAccessReasons(client) {
+  const membership = getMembershipStatus(client.fechaVencimiento)
+  const frozen = client.congeladaHasta && new Date(client.congeladaHasta) > new Date()
+  const reasons = []
+  if (!client.photo) reasons.push('sin fotografía registrada')
+  if (Number(client.deuda || 0) > 0) reasons.push(`deuda pendiente de Bs ${Number(client.deuda).toFixed(2)}`)
+  if (frozen) reasons.push('membresía congelada')
+  if (membership.key === 'vencida') reasons.push('membresía vencida')
+  return reasons
 }
 
 function Avatar({ photo, nombre, apellido }) {
-  const initials = `${(nombre || '?')[0]}${(apellido || '')[0] || ''}`.toUpperCase()
   if (photo) {
     return <img src={photo} alt={`Foto de ${nombre} ${apellido}`} className="h-20 w-20 rounded-2xl border border-line object-cover" />
   }
   return (
-    <span className="flex h-20 w-20 items-center justify-center rounded-2xl border border-line bg-card-2 font-display text-2xl font-bold text-accent">
-      {initials}
+    <span className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl border border-red-500/40 bg-red-500/10 text-[10px] font-semibold text-red-300">
+      <User className="h-6 w-6" />
+      Sin foto
     </span>
   )
 }
 
-export default function AttendanceControl({ clients, attendance, onRegisterAttendance, onToast }) {
+export default function AttendanceControl({
+  clients,
+  attendance,
+  onRegisterAttendance,
+  onToast,
+  onBlockedAccess,
+}) {
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
+  const searchRef = useRef(null)
 
   const selected = useMemo(
     () => clients.find((c) => c.id === selectedId) || null,
@@ -64,18 +87,55 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
       .slice(0, 6)
   }, [clients, query])
 
-  const status = selected ? getMembershipStatus(selected.fechaVencimiento) : null
+  const membershipStatus = selected ? getMembershipStatus(selected.fechaVencimiento) : null
+  const isFrozen = Boolean(selected?.congeladaHasta && new Date(selected.congeladaHasta) > new Date())
+  const status = isFrozen ? { key: 'congelada', label: 'Congelada' } : membershipStatus
   const style = selected ? STATUS_STYLES[status.key] : null
+  const accessReasons = selected ? getAccessReasons(selected) : []
+  const daysRemaining = selected?.fechaVencimiento
+    ? Math.ceil((new Date(`${selected.fechaVencimiento}T23:59:59`) - new Date()) / 86400000)
+    : null
+  const financiallyCurrent = Number(selected?.deuda || 0) <= 0
+  const canEnter = Boolean(selected && accessReasons.length === 0)
+
+  useEffect(() => {
+    searchRef.current?.focus()
+  }, [selectedId])
+
+  const playFeedback = (success) => {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (!AudioContext) return
+    const context = new AudioContext()
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    oscillator.type = 'sine'
+    oscillator.frequency.value = success ? 880 : 220
+    gain.gain.setValueAtTime(0.0001, context.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.25)
+    oscillator.connect(gain)
+    gain.connect(context.destination)
+    oscillator.start()
+    oscillator.stop(context.currentTime + 0.26)
+    oscillator.onended = () => context.close()
+  }
 
   const handleSelect = (client) => {
     setSelectedId(client.id)
     setQuery('')
+    const reasons = getAccessReasons(client)
+    const allowed = reasons.length === 0
+    playFeedback(allowed)
+    if (!allowed) {
+      onBlockedAccess?.(client, reasons.join(', '))
+    }
   }
 
   const handleRegister = async () => {
-    if (!selected) return
-    await onRegisterAttendance(selected)
-    onToast('¡Asistencia registrada correctamente!')
+    if (!selected || !canEnter) return
+    await onRegisterAttendance(selected, 'permitido')
+    playFeedback(true)
+    onToast('Ingreso confirmado correctamente.')
     setSelectedId(null)
     setQuery('')
   }
@@ -97,7 +157,15 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
             <input
               type="text"
               value={query}
+              ref={searchRef}
+              autoFocus
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && results.length === 1) {
+                  event.preventDefault()
+                  handleSelect(results[0])
+                }
+              }}
               placeholder="Ej: 7054321, cli-1001 o María"
               className="field pl-10"
               aria-label="Buscar socio"
@@ -156,6 +224,11 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
                 nombre={selected.nombre}
                 apellido={selected.apellido}
               />
+              {!selected.photo && (
+                <span className="max-w-24 text-center text-xs font-semibold text-red-400">
+                  Foto no registrada
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display text-2xl font-bold uppercase text-white">
@@ -172,7 +245,7 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-line bg-card px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-muted">Plan actual</p>
                 <p className="mt-1 font-semibold text-white">
@@ -180,34 +253,38 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
                 </p>
               </div>
               <div className="rounded-xl border border-line bg-card px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted">Inicio</p>
-                <p className="mt-1 font-semibold text-white">
-                  {selected.fechaInicio || '—'}
+                <p className="text-xs uppercase tracking-wide text-muted">Tiempo restante</p>
+                <p className={`mt-1 font-semibold ${daysRemaining >= 0 ? 'text-white' : 'text-red-400'}`}>
+                  {daysRemaining === null ? 'Sin membresía' : daysRemaining < 0 ? 'Vencida' : `${daysRemaining} días`}
+                </p>
+              </div>
+              <div className="rounded-xl border border-line bg-card px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted">Estado financiero</p>
+                <p className={`mt-1 font-semibold ${financiallyCurrent ? 'text-volt' : 'text-red-400'}`}>
+                  {financiallyCurrent ? 'Al día' : `Deuda ${Number(selected.deuda).toLocaleString('es-BO')} Bs.`}
                 </p>
               </div>
               <div className="rounded-xl border border-line bg-card px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-muted">Vencimiento</p>
-                <p className="mt-1 font-semibold text-white">
-                  {selected.fechaVencimiento || '—'}
-                </p>
+                <p className="mt-1 font-semibold text-white">{selected.fechaVencimiento || '—'}</p>
               </div>
             </div>
 
-            {!style.allowed && (
+            {!canEnter && (
               <div className="mt-5 flex items-center gap-3 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-4">
                 <ShieldAlert className="h-6 w-6 shrink-0 text-red-400" />
                 <div>
                   <p className="font-display text-sm font-bold uppercase tracking-wide text-red-400">
-                    Acceso denegado - Membresía vencida
+                    Acceso denegado
                   </p>
                   <p className="text-xs text-red-300/80">
-                    El socio debe renovar su membresía antes de ingresar.
+                    {accessReasons.join(' · ')}.
                   </p>
                 </div>
               </div>
             )}
 
-            {style.allowed && (
+            {canEnter && (
               <div className="mt-5 flex items-center gap-3 rounded-xl border border-volt/30 bg-volt/5 px-4 py-4">
                 <ShieldCheck className="h-6 w-6 shrink-0 text-volt" />
                 <div>
@@ -222,16 +299,19 @@ export default function AttendanceControl({ clients, attendance, onRegisterAtten
                 </div>
               </div>
             )}
-
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={handleRegister}
-                disabled={!style.allowed}
-                className="btn-sheen inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={canEnter ? handleRegister : () => playFeedback(false)}
+                disabled={!canEnter}
+                className={`inline-flex min-h-16 flex-1 items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-black uppercase tracking-wide text-white transition disabled:cursor-not-allowed ${
+                  canEnter
+                    ? 'bg-volt text-ink hover:bg-volt/80'
+                    : 'bg-red-600 hover:bg-red-600'
+                }`}
               >
-                <CheckCircle2 className="h-4 w-4" />
-                Registrar Asistencia
+                {canEnter ? <CheckCircle2 className="h-6 w-6" /> : <ShieldAlert className="h-6 w-6" />}
+                {canEnter ? 'Confirmar Ingreso' : 'Denegar Ingreso'}
               </button>
               <button
                 type="button"
