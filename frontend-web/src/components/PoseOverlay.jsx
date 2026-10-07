@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 
 // Dibuja el esqueleto de la pose sobre el video y resalta las articulaciones
-// usadas por el analizador de sentadilla (cadera, rodilla, tobillo).
+// usadas por el analizador del ejercicio seleccionado (por defecto sentadilla:
+// cadera, rodilla, tobillo).
 
 const CONNECTIONS = [
   [11, 12],
@@ -22,11 +23,16 @@ const CONNECTIONS = [
   [30, 32],
 ]
 
-const HIGHLIGHT = new Set([23, 24, 25, 26, 27, 28])
+const DEFAULT_HIGHLIGHT = [23, 24, 25, 26, 27, 28]
 const MIN_VISIBILITY = 0.5
 
-export default function PoseOverlay({ canvasRef, videoRef, landmarksRef }) {
+export default function PoseOverlay({ canvasRef, videoRef, landmarksRef, highlight = DEFAULT_HIGHLIGHT }) {
   const rafRef = useRef(0)
+  const highlightRef = useRef(highlight)
+
+  useEffect(() => {
+    highlightRef.current = highlight
+  }, [highlight])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -60,7 +66,8 @@ export default function PoseOverlay({ canvasRef, videoRef, landmarksRef }) {
         if (!a || !b) continue
         if ((a.visibility ?? 1) < MIN_VISIBILITY || (b.visibility ?? 1) < MIN_VISIBILITY) continue
 
-        const isHighlight = HIGHLIGHT.has(start) && HIGHLIGHT.has(end)
+        const highlight = highlightRef.current
+        const isHighlight = highlight.includes(start) && highlight.includes(end)
         context.strokeStyle = isHighlight ? 'rgba(216, 243, 78, 0.95)' : 'rgba(255, 255, 255, 0.45)'
         context.beginPath()
         context.moveTo(a.x * width, a.y * height)
@@ -68,10 +75,12 @@ export default function PoseOverlay({ canvasRef, videoRef, landmarksRef }) {
         context.stroke()
       }
 
+      const highlight = highlightRef.current
       landmarks.forEach((point, index) => {
         if ((point.visibility ?? 1) < MIN_VISIBILITY) return
-        const radius = HIGHLIGHT.has(index) ? Math.max(5, width / 110) : Math.max(3, width / 200)
-        context.fillStyle = HIGHLIGHT.has(index) ? '#d8f34e' : 'rgba(255, 255, 255, 0.75)'
+        const highlighted = highlight.includes(index)
+        const radius = highlighted ? Math.max(5, width / 110) : Math.max(3, width / 200)
+        context.fillStyle = highlighted ? '#d8f34e' : 'rgba(255, 255, 255, 0.75)'
         context.beginPath()
         context.arc(point.x * width, point.y * height, radius, 0, Math.PI * 2)
         context.fill()

@@ -7,11 +7,12 @@ import usePoseDetection from '../hooks/usePoseDetection'
 
 import { AVAILABLE_EXERCISES } from '../data/exercises'
 
-// Entrenador virtual de ejercicios. Por ahora solo sentadillas; el catálogo
-// queda preparado para registrar más ejercicios con su propio analizador.
+// Entrenador virtual de ejercicios con cámara. Soporta varios ejercicios
+// (sentadillas, flexiones...) cada uno con su propio analizador de pose.
 
 const STATE_STYLES = {
   IDLE: 'border-line text-muted',
+  TOP: 'border-volt/60 text-volt',
   STANDING: 'border-volt/60 text-volt',
   DESCENDING: 'border-accent/60 text-accent',
   BOTTOM: 'border-accent text-accent',
@@ -19,7 +20,7 @@ const STATE_STYLES = {
 }
 
 export default function SquatCoachModal({ open, onClose }) {
-  const [selectedId] = useState(() => AVAILABLE_EXERCISES[0].id)
+  const [selectedId, setSelectedId] = useState(() => AVAILABLE_EXERCISES[0].id)
   const [cameraActive, setCameraActive] = useState(false)
   const canvasRef = useRef(null)
   const exercise = useMemo(
@@ -35,6 +36,7 @@ export default function SquatCoachModal({ open, onClose }) {
   const { poseState, modelStatus, landmarksRef, resetReps } = usePoseDetection({
     enabled: open && cameraActive && cameraStatus === 'ready',
     videoRef,
+    exercise: exercise.id,
   })
 
   const stopEverything = () => {
@@ -57,7 +59,24 @@ export default function SquatCoachModal({ open, onClose }) {
           <p className="section-label">
             <Activity className="h-4 w-4" /> Análisis de ejercicio en tiempo real
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{exercise.description}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {AVAILABLE_EXERCISES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedId(item.id)}
+                aria-pressed={selectedId === item.id}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide transition ${
+                  selectedId === item.id
+                    ? 'border-volt/70 bg-volt/10 text-volt'
+                    : 'border-line text-muted hover:border-volt/40 hover:text-white'
+                }`}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted">{exercise.description}</p>
         </div>
 
         {!showCamera ? (
@@ -90,7 +109,12 @@ export default function SquatCoachModal({ open, onClose }) {
                   aria-label="Cámara en vivo"
                 />
                 {isDetecting && (
-                  <PoseOverlay canvasRef={canvasRef} videoRef={videoRef} landmarksRef={landmarksRef} />
+                  <PoseOverlay
+                    canvasRef={canvasRef}
+                    videoRef={videoRef}
+                    landmarksRef={landmarksRef}
+                    highlight={exercise.highlight}
+                  />
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
@@ -132,11 +156,26 @@ export default function SquatCoachModal({ open, onClose }) {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Rodilla</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{exercise.metricLabel}</span>
                   <strong className="text-sm text-volt">
-                    {poseState.kneeAngle === null ? '--' : `${Math.round(poseState.kneeAngle)}°`}
+                    {poseState[exercise.metricKey] === null || poseState[exercise.metricKey] === undefined
+                      ? '--'
+                      : `${Math.round(poseState[exercise.metricKey])}°`}
                   </strong>
                 </div>
+                {exercise.secondaryMetricKey && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                      {exercise.secondaryMetricLabel}
+                    </span>
+                    <strong className="text-sm text-volt">
+                      {poseState[exercise.secondaryMetricKey] === null ||
+                      poseState[exercise.secondaryMetricKey] === undefined
+                        ? '--'
+                        : `${Math.round(poseState[exercise.secondaryMetricKey])}°`}
+                    </strong>
+                  </div>
+                )}
                 <p className="rounded-xl bg-black/20 px-3 py-2 text-sm text-white" aria-live="polite">
                   {poseState.feedback}
                 </p>
@@ -162,10 +201,7 @@ export default function SquatCoachModal({ open, onClose }) {
           </p>
         )}
 
-        <p className="text-xs leading-relaxed text-muted">
-          Una repetición cuenta solo si partes de pie, bajas a una profundidad suficiente, mantienes la posición baja y
-          vuelves a la posición inicial. Los movimientos incompletos no suman.
-        </p>
+        <p className="text-xs leading-relaxed text-muted">{exercise.rules}</p>
       </div>
     </Modal>
   )
