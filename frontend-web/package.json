@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node scripts/squat-analyzer.test.mjs",
+    "test": "node scripts/squat-analyzer.test.mjs && node scripts/pushup-analyzer.test.mjs",
+    "test:pushup": "node scripts/pushup-analyzer.test.mjs",
     "test:camera": "node scripts/camera-smoke.mjs",
     "test:food": "node scripts/food-analysis-smoke.mjs",
     "preview": "vite preview"

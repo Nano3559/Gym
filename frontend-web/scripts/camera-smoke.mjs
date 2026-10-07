@@ -254,6 +254,30 @@ try {
   report('entrenador: ángulo de rodilla visible', trainer?.showsAngle === true)
   report('entrenador: modelo de pose cargado', trainer?.modelLoaded === true && trainer?.modelFailed !== true)
 
+  // El catálogo permite elegir flexiones y la métrica mostrada cambia a codo.
+  const flex = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Flexiones$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Flexiones no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsCodo: /Codo/i.test(text),
+        showsCuerpo: /Cuerpo/i.test(text),
+        showsFlexiones: /Flexiones/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: flexiones seleccionables y métrica de codo',
+    flex?.pillFound && flex?.showsCodo === true && flex?.showsCuerpo === true,
+    JSON.stringify(flex),
+  )
+
   await evaluate(
     client,
     `(async () => {
