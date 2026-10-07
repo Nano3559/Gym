@@ -62,12 +62,13 @@ export function toClientShape(rc) {
     apellido,
     ci: rc.ci || '',
     telefono: rc.phone || '',
+    fechaNacimiento: rc.birthDate || '',
     plan: displayToCode[planNombre] || '',
     planNombre,
     fechaInicio: rc.startDate || todayISO(),
     fechaVencimiento: rc.endDate || shiftDate(30),
     status: rc.status || 'Activa',
-    photo: null,
+    photo: rc.photo || rc.foto_url || null,
   }
 }
 
@@ -78,6 +79,8 @@ export function registeredClientFromForm(form) {
     email: form.correo,
     ci: form.ci,
     phone: form.telefono,
+    birthDate: form.nacimiento,
+    photo: form.foto || null,
     plan: PLAN_NAMES[form.plan] || 'Plan Básico',
     startDate: todayISO(),
     endDate: shiftDate(30),

@@ -1,13 +1,21 @@
 import { useState } from 'react'
-import { RefreshCw, Search, User } from 'lucide-react'
+import { Download, Ellipsis, ExternalLink, Plus, RefreshCw, Search, User } from 'lucide-react'
 import Modal from '../ui/Modal'
 import { getMembershipStatus } from '../../lib/membershipStatus'
 import { PLAN_LIST, METODOS_PAGO } from '../../data/adminData'
+import { downloadCsv } from '../../lib/csv'
 
 const STATUS_STYLES = {
   activa: 'border-volt/40 bg-volt/10 text-volt',
   por_vencer: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
   vencida: 'border-red-500/50 bg-red-500/10 text-red-400',
+  congelada: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+}
+
+function whatsappLink(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (!digits) return null
+  return `https://wa.me/${digits.length === 8 ? `591${digits}` : digits}`
 }
 
 function StatusBadge({ status }) {
@@ -29,9 +37,26 @@ function StatusBadge({ status }) {
   )
 }
 
-export default function ClientsManagement({ clients, onRenewMembership, onToast }) {
+export default function ClientsManagement({
+  clients,
+  onRenewMembership,
+  onToast,
+  onNewMember,
+  onGetHistory,
+  onUpdateClient,
+  onFreezeMembership,
+  isAdmin = false,
+}) {
   const [filter, setFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('todos')
   const [renewClient, setRenewClient] = useState(null)
+  const [detailClient, setDetailClient] = useState(null)
+  const [history, setHistory] = useState({ payments: [], attendance: [] })
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [profileClient, setProfileClient] = useState(null)
+  const [freezeClient, setFreezeClient] = useState(null)
+  const [freezeDays, setFreezeDays] = useState('7')
+  const [saving, setSaving] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('completo')
   const [metodoPago, setMetodoPago] = useState('efectivo')
 
@@ -45,7 +70,28 @@ export default function ClientsManagement({ clients, onRenewMembership, onToast 
         String(c.id || '').toLowerCase().includes(q)
       )
     })
-    .map((c) => ({ ...c, status: getMembershipStatus(c.fechaVencimiento) }))
+    .map((c) => ({
+      ...c,
+      status: c.congeladaHasta && new Date(c.congeladaHasta) > new Date()
+        ? { key: 'congelada', label: 'Congelada' }
+        : getMembershipStatus(c.fechaVencimiento),
+    }))
+    .filter((c) => statusFilter === 'todos'
+      || (statusFilter === 'activos'
+        ? c.status.key === 'activa' || c.status.key === 'por_vencer'
+        : c.status.key === 'vencida'))
+
+  const openDetails = async (client) => {
+    setDetailClient(client)
+    setHistoryLoading(true)
+    try {
+      setHistory(await onGetHistory?.(client.id) || { payments: [], attendance: [] })
+    } catch (error) {
+      onToast(`No se pudo cargar el historial: ${error.message}`, 'error')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   const openRenew = (client) => {
     setRenewClient(client)
@@ -62,6 +108,52 @@ export default function ClientsManagement({ clients, onRenewMembership, onToast 
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {[
+            ['todos', 'Todos'],
+            ['activos', 'Solo Activos'],
+            ['vencidos', 'Solo Vencidos'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setStatusFilter(key)}
+              className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+                statusFilter === key
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-line text-muted hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => downloadCsv('socios-ironforge.csv', [
+                ['Nombre', 'Apellido', 'CI', 'Teléfono', 'Plan', 'Inicio', 'Vencimiento', 'Estado'],
+                ...rows.map((c) => [c.nombre, c.apellido, c.ci, c.telefono,
+                  c.planNombre || c.plan, c.fechaInicio, c.fechaVencimiento, c.status.label]),
+              ])}
+              className="inline-flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted hover:text-white"
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onNewMember}
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white hover:bg-accent-hover"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Socio
+          </button>
+        </div>
+      </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">
@@ -108,9 +200,13 @@ export default function ClientsManagement({ clients, onRenewMembership, onToast 
                         {c.nombre[0]}
                         {c.apellido[0]}
                       </span>
-                      <span className="font-semibold text-white">
+                      <button
+                        type="button"
+                        onClick={() => openDetails(c)}
+                        className="text-left font-semibold text-white hover:text-accent"
+                      >
                         {c.nombre} {c.apellido}
-                      </span>
+                      </button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted">{c.ci}</td>
@@ -122,14 +218,48 @@ export default function ClientsManagement({ clients, onRenewMembership, onToast 
                     <StatusBadge status={c.status} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openRenew(c)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-accent transition hover:bg-accent hover:text-white"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Renovar
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openRenew(c)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-accent transition hover:bg-accent hover:text-white"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Renovar
+                      </button>
+                      <details className="relative text-left">
+                        <summary
+                          aria-label={`Acciones de ${c.nombre} ${c.apellido}`}
+                          className="list-none cursor-pointer rounded-lg border border-line p-2 text-muted hover:text-white"
+                        >
+                          <Ellipsis className="h-4 w-4" />
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-line bg-surface p-1 shadow-xl">
+                          <button type="button" onClick={() => setProfileClient({ ...c })}
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-card">
+                            Editar Perfil
+                          </button>
+                          <button type="button" onClick={() => openDetails(c)}
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-card">
+                            {isAdmin ? 'Ver Historial de Pagos' : 'Ver perfil'}
+                          </button>
+                          <button type="button" onClick={() => { setFreezeClient(c); setFreezeDays('7') }}
+                            disabled={!c.membershipId}
+                            className="w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-card disabled:opacity-40">
+                            Congelar Membresía
+                          </button>
+                          {whatsappLink(c.telefono) ? (
+                            <a href={whatsappLink(c.telefono)}
+                              target="_blank" rel="noreferrer"
+                              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-white hover:bg-card">
+                              Contactar por WhatsApp <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          ) : (
+                            <span className="block px-3 py-2 text-sm text-muted">Sin teléfono registrado</span>
+                          )}
+                        </div>
+                      </details>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -211,21 +341,160 @@ export default function ClientsManagement({ clients, onRenewMembership, onToast 
             </div>
 
             <div className="rounded-xl border border-line bg-card-2 px-4 py-3 text-sm text-muted">
-              La membresía se extenderá{' '}
-              <span className="font-semibold text-white">30 días</span> a partir de la fecha de
-              vencimiento vigente.
+              La membresía se extenderá según la duración del plan desde el vencimiento actual
+              (o desde hoy si ya venció).
             </div>
 
             <button
               type="button"
-              onClick={handleConfirmRenew}
-              className="btn-sheen flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+            onClick={async () => {
+              setSaving(true)
+              try {
+                await handleConfirmRenew()
+              } catch (error) {
+                onToast(`No se pudo renovar la membresía: ${error.message}`, 'error')
+              } finally {
+                setSaving(false)
+              }
+            }}
+            disabled={saving}
+            className="btn-sheen flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
             >
-              <RefreshCw className="h-4 w-4" />
-              Confirmar renovación
+            <RefreshCw className="h-4 w-4" />
+            {saving ? 'Procesando…' : 'Confirmar renovación'}
             </button>
           </div>
         )}
+      </Modal>
+      <Modal
+        open={Boolean(detailClient)}
+        onClose={() => setDetailClient(null)}
+        title="Perfil e historial del socio"
+        maxWidth="max-w-3xl"
+      >
+        {detailClient && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              {detailClient.photo
+                ? <img src={detailClient.photo} alt={`Foto de ${detailClient.nombre}`} className="h-20 w-20 rounded-xl object-cover" />
+                : <span className="flex h-20 w-20 items-center justify-center rounded-xl bg-card text-2xl font-bold text-accent">{detailClient.nombre?.[0]}</span>}
+              <div>
+                <h3 className="font-display text-xl font-bold text-white">{detailClient.nombre} {detailClient.apellido}</h3>
+                <p className="text-sm text-muted">{detailClient.telefono} · CI {detailClient.ci}</p>
+              </div>
+            </div>
+            {isAdmin && (
+              <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+                <p className="text-xs uppercase text-muted">Life Time Value · pagos completados</p>
+                <p className="mt-1 font-display text-2xl font-bold text-white">
+                  {history.payments.filter((item) => item.estado_pago === 'completado')
+                    .reduce((sum, item) => sum + Number(item.monto), 0).toLocaleString('es-BO')} Bs.
+                </p>
+              </div>
+            )}
+            <section>
+              <h4 className="mb-2 font-semibold text-white">Historial de pagos y comprobantes</h4>
+              {historyLoading ? <p className="text-sm text-muted">Cargando historial…</p>
+                : history.payments.length ? (
+                  <ul className="max-h-48 space-y-2 overflow-y-auto">
+                    {history.payments.map((payment) => (
+                      <li key={payment.id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm">
+                        <span className="text-muted">{new Date(payment.created_at).toLocaleDateString('es-BO')} · {payment.estado_pago}</span>
+                        <span className="font-semibold text-white">{Number(payment.monto).toLocaleString('es-BO')} Bs.</span>
+                        {payment.transaction_id && <span className="text-xs text-accent">Recibo {payment.receipt_number || payment.transaction_id}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-sm text-muted">No hay pagos en el historial disponible.</p>}
+            </section>
+            <section>
+              <h4 className="mb-2 font-semibold text-white">Historial de asistencias</h4>
+              {history.attendance.slice(0, 15).map((entry) => (
+                <p key={entry.id} className="border-b border-line py-2 text-sm text-muted">
+                  {new Date(entry.fecha).toLocaleString('es-BO')} · {entry.estado}
+                </p>
+              ))}
+              {!history.attendance.length && <p className="text-sm text-muted">Sin asistencias registradas.</p>}
+            </section>
+          </div>
+        )}
+      </Modal>
+      <Modal open={Boolean(profileClient)} onClose={() => setProfileClient(null)} title="Editar perfil">
+        {profileClient && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault()
+              setSaving(true)
+              try {
+                await onUpdateClient(profileClient)
+                onToast('Perfil actualizado.')
+                setProfileClient(null)
+              } catch (error) {
+                onToast(`No se pudo actualizar el perfil: ${error.message}`, 'error')
+              } finally {
+                setSaving(false)
+              }
+            }}
+            className="space-y-4"
+          >
+            {['nombre', 'apellido', 'telefono'].map((field) => (
+              <label key={field} className="block text-xs font-semibold uppercase text-muted">
+                {field}
+                <input className="field mt-1.5" value={profileClient[field] || ''}
+                  onChange={(event) => setProfileClient((current) => ({ ...current, [field]: event.target.value }))} required />
+              </label>
+            ))}
+            <label className="block text-xs font-semibold uppercase text-muted">
+              Fotografía del socio
+              <input type="file" accept="image/*" capture="user" className="field mt-1.5"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
+                    onToast('Elige una imagen de menos de 8 MB.', 'error')
+                    return
+                  }
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    const image = new Image()
+                    image.onload = () => {
+                      const scale = Math.min(1, 480 / Math.max(image.width, image.height))
+                      const canvas = document.createElement('canvas')
+                      canvas.width = Math.max(1, Math.round(image.width * scale))
+                      canvas.height = Math.max(1, Math.round(image.height * scale))
+                      canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
+                      setProfileClient((current) => ({ ...current, photo: canvas.toDataURL('image/jpeg', 0.68) }))
+                    }
+                    image.src = String(reader.result)
+                  }
+                  reader.readAsDataURL(file)
+                }} />
+            </label>
+            {profileClient.photo && <img src={profileClient.photo} alt="Vista previa" className="h-24 w-24 rounded-xl object-cover" />}
+            <button disabled={saving || !profileClient.photo}
+              className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-white disabled:opacity-50">
+              {saving ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          </form>
+        )}
+      </Modal>
+      <Modal open={Boolean(freezeClient)} onClose={() => setFreezeClient(null)} title="Congelar membresía">
+        <form onSubmit={async (event) => {
+          event.preventDefault()
+          try {
+            await onFreezeMembership(freezeClient.membershipId, Number(freezeDays))
+            onToast(`Membresía congelada por ${freezeDays} días.`)
+            setFreezeClient(null)
+          } catch (error) {
+            onToast(`No se pudo congelar la membresía: ${error.message}`, 'error')
+          }
+        }} className="space-y-4">
+          <p className="text-sm text-muted">{freezeClient?.nombre} {freezeClient?.apellido}</p>
+          <label className="block text-xs font-semibold uppercase text-muted">Días (1–90)
+            <input type="number" min="1" max="90" value={freezeDays} onChange={(event) => setFreezeDays(event.target.value)} className="field mt-1.5" />
+          </label>
+          <button className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-white">Confirmar congelamiento</button>
+        </form>
       </Modal>
     </div>
   )

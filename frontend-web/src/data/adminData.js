@@ -17,6 +17,7 @@ export const PLAN_LIST = [
 export const METODOS_PAGO = [
   { key: 'qr', label: 'QR' },
   { key: 'efectivo', label: 'Efectivo' },
+  { key: 'yape_plin', label: 'Yape/Plin' },
   { key: 'transferencia', label: 'Transferencia' },
   { key: 'tarjeta', label: 'Tarjeta' },
 ]

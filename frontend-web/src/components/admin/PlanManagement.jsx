@@ -12,6 +12,10 @@ const EMPTY_FORM = {
   featuresText: '',
   highlighted: false,
   active: true,
+  type: 'membresia',
+  startDate: '',
+  endDate: '',
+  quantityIncluded: 1,
 }
 
 function featuresFromText(text) {
@@ -22,7 +26,7 @@ function featuresFromText(text) {
 }
 
 export default function PlanManagement({ onToast }) {
-  const { plans, savePlan, togglePlan } = usePlans()
+  const { plans, savePlan, togglePlan, loadError } = usePlans()
   const [editing, setEditing] = useState(null) // null | 'new' | plan object
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
@@ -37,6 +41,10 @@ export default function PlanManagement({ onToast }) {
       featuresText: (plan.features || []).join('\n'),
       highlighted: plan.highlighted,
       active: plan.active,
+      type: plan.type || 'membresia',
+      startDate: plan.startDate || '',
+      endDate: plan.endDate || '',
+      quantityIncluded: plan.quantityIncluded || 1,
     })
     setErrors({})
     setEditing(plan)
@@ -65,7 +73,13 @@ export default function PlanManagement({ onToast }) {
     const errs = {}
     if (!form.name.trim()) errs.name = 'El nombre es obligatorio'
     if (!(Number(form.price) > 0)) errs.price = 'Ingresa un precio válido en Bs.'
-    if (!(Number(form.durationDays) > 0)) errs.durationDays = 'Ingresa la duración en días'
+    if (!Number.isInteger(Number(form.durationDays)) || Number(form.durationDays) < 1) errs.durationDays = 'Ingresa la duración en días'
+    if (!Number.isInteger(Number(form.quantityIncluded)) || Number(form.quantityIncluded) < 1) errs.quantityIncluded = 'Ingresa una cantidad entera positiva'
+    if (form.type === 'promocion'
+      && (!form.startDate || !form.endDate || form.endDate < form.startDate)) {
+      errs.startDate = 'Indica un período de promoción válido'
+      errs.endDate = 'La fecha final debe ser igual o posterior a la inicial'
+    }
     const features = featuresFromText(form.featuresText)
     if (features.length === 0) errs.featuresText = 'Añade al menos una característica (una por línea)'
     setErrors(errs)
@@ -80,15 +94,27 @@ export default function PlanManagement({ onToast }) {
       features,
       highlighted: form.highlighted,
       active: form.active,
+      type: form.type,
+      startDate: form.startDate,
+      endDate: form.endDate,
+      quantityIncluded: Number(form.quantityIncluded),
     }
-    await savePlan(plan)
-    onToast?.(editing === 'new' ? 'Plan creado correctamente.' : 'Plan actualizado correctamente.')
-    close()
+    try {
+      await savePlan(plan)
+      onToast?.(editing === 'new' ? 'Plan creado correctamente.' : 'Plan actualizado correctamente.')
+      close()
+    } catch (error) {
+      onToast?.(`No se pudo guardar el plan: ${error.message}`, 'error')
+    }
   }
 
   const handleToggle = async (plan) => {
-    await togglePlan(plan.id)
-    onToast?.(plan.active ? 'Plan desactivado.' : 'Plan activado.')
+    try {
+      await togglePlan(plan.id)
+      onToast?.(plan.active ? 'Plan desactivado.' : 'Plan activado.')
+    } catch (error) {
+      onToast?.(`No se pudo cambiar el estado del plan: ${error.message}`, 'error')
+    }
   }
 
   const inputClass =
@@ -108,6 +134,11 @@ export default function PlanManagement({ onToast }) {
             Precios, duración, características y visibilidad de los planes de membresía.
           </p>
         </div>
+        {loadError && (
+          <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-300">
+            No se pudieron cargar los planes desde la base de datos: {loadError}
+          </p>
+        )}
         <button
           type="button"
           onClick={openNew}
@@ -132,6 +163,11 @@ export default function PlanManagement({ onToast }) {
                   {plan.name}
                 </h3>
                 <p className="text-xs text-muted">{plan.description || plan.tagline}</p>
+                {plan.type !== 'membresia' && (
+                  <p className="mt-1 text-xs font-semibold uppercase text-accent">
+                    {plan.type === 'day_pass' ? 'Day Pass' : 'Promoción temporal'}
+                  </p>
+                )}
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${
@@ -238,6 +274,37 @@ export default function PlanManagement({ onToast }) {
               {errText('durationDays')}
             </div>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+              Tipo
+              <select value={form.type} onChange={set('type')} className={`${inputClass} mt-1.5`}>
+                <option value="membresia">Membresía</option>
+                <option value="promocion">Promoción temporal</option>
+                <option value="day_pass">Pase diario (Day Pass)</option>
+              </select>
+            </label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+              Accesos incluidos
+              <input type="number" min="1" step="1" value={form.quantityIncluded}
+                onChange={set('quantityIncluded')} className={`${inputClass} mt-1.5`} />
+              {errText('quantityIncluded')}
+            </label>
+          </div>
+          {form.type === 'promocion' && (
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+                Vigente desde
+                <input type="date" value={form.startDate} onChange={set('startDate')} className={`${inputClass} mt-1.5`} />
+                {errText('startDate')}
+              </label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+                Vigente hasta
+                <input type="date" value={form.endDate} onChange={set('endDate')} className={`${inputClass} mt-1.5`} />
+                {errText('endDate')}
+              </label>
+            </div>
+          )}
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">

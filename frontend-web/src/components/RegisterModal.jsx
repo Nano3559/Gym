@@ -13,6 +13,7 @@ const initialForm = {
   correo: '',
   direccion: '',
   emergencia: '',
+  foto: '',
   password: '',
   confirmPassword: '',
 }
@@ -70,6 +71,7 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
       if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age -= 1
       if (age < 14) errs.nacimiento = 'Debes ser mayor de 14 años para registrarte'
     }
+    if (!form.foto) errs.foto = 'La fotografía del socio es obligatoria para control de acceso'
     if (!form.telefono.trim()) errs.telefono = 'El teléfono es obligatorio'
     else if (!/^\+?\d{7,12}$/.test(form.telefono.trim()))
       errs.telefono = 'Ingresa un teléfono válido'
@@ -106,6 +108,36 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
   const set = (key) => (e) => {
     setForm((f) => ({ ...f, [key]: e.target.value }))
     if (errors[key]) setErrors((errs) => ({ ...errs, [key]: undefined }))
+  }
+
+  const setPhoto = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setErrors((current) => ({ ...current, foto: 'Selecciona un archivo de imagen válido' }))
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setErrors((current) => ({ ...current, foto: 'La foto debe pesar menos de 8 MB' }))
+      return
+    }
+    const reader = new FileReader()
+    reader.onerror = () => setErrors((current) => ({ ...current, foto: 'No se pudo leer la foto' }))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => setErrors((current) => ({ ...current, foto: 'El archivo no contiene una imagen válida' }))
+      image.onload = () => {
+        const scale = Math.min(1, 480 / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
+        setForm((current) => ({ ...current, foto: canvas.toDataURL('image/jpeg', 0.68) }))
+        setErrors((current) => ({ ...current, foto: undefined }))
+      }
+      image.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
   }
 
   const renderField = ({ name, label, icon: Icon, type = 'text', placeholder, max, error }) => (
@@ -215,6 +247,26 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
             placeholder: 'Ej. Av. Banzer #1234',
             error: errors.direccion,
           })}
+          <div>
+            <label
+              htmlFor="rg-foto"
+              className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted"
+            >
+              Fotografía para verificación de ingreso <span className="text-accent">*</span>
+            </label>
+            <input
+              id="rg-foto"
+              type="file"
+              accept="image/*"
+              capture="user"
+              onChange={setPhoto}
+              className="field"
+            />
+            {form.foto && (
+              <img src={form.foto} alt="Foto del socio" className="mt-3 h-24 w-24 rounded-xl object-cover" />
+            )}
+            {errors.foto && <p className="mt-1 text-xs text-red-400">{errors.foto}</p>}
+          </div>
 
           {renderField({
             name: 'emergencia',

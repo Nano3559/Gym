@@ -163,11 +163,24 @@ export function AuthProvider({ children }) {
 
     // Asegura el perfil con todos los datos del formulario (el trigger de BD
     // ya crea una fila base desde user_metadata; aquí se completa/actualiza).
+    let photoPath = null
+    if (formData.foto && data.session) {
+      const photoBlob = await (await fetch(formData.foto)).blob()
+      const upload = await supabase.storage
+        .from('member-photos')
+        .upload(`${data.user.id}/profile.jpg`, photoBlob, {
+          upsert: true,
+          contentType: 'image/jpeg',
+        })
+      if (upload.error) return { ok: false, message: `No se pudo guardar la foto: ${upload.error.message}` }
+      photoPath = upload.data.path
+    }
     const profileRow = {
       id: data.user.id,
       email: formData.correo,
       ...metadata,
       plan_id: planId,
+      foto_url: photoPath,
     }
     delete profileRow.plan_codigo
     const { error: upsertError } = await supabase

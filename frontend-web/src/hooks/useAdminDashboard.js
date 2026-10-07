@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { seedClients, todayISO } from '../data/adminData'
 import { weeklyClasses } from '../data/gymData'
@@ -48,11 +48,10 @@ function filterByDate(classes, dateStr) {
 
 /**
  * Métricas del Dashboard Administrativo (Módulo 7 - Parte 1).
- * Con Supabase configurado intenta leer datos reales (miembros, pagos y
- * reservas del día); ante cualquier error usa la semilla local para no romper
- * la UI, conservando la estética de datos del Módulo 1.
+ * Con Supabase configurado intenta leer datos reales (membresías y reservas
+ * del día); los ingresos mensuales solo se muestran en el panel de admin.
  */
-export default function useAdminDashboard() {
+export default function useAdminDashboard({ includeMonthlyIncome = true } = {}) {
   const today = todayISO()
 
   const metrics = useMemo(() => {
@@ -76,15 +75,15 @@ export default function useAdminDashboard() {
       today,
       sociosActivos: sociosActivos.length,
       porVencer: porVencer.length,
-      ingresosMes,
+      ingresosMes: includeMonthlyIncome ? ingresosMes : 0,
       reservasDelDia,
       ranking,
       clasesDelDia,
     }
-  }, [today])
+  }, [today, includeMonthlyIncome])
 
   // Intento de refresco con datos reales de Supabase (best-effort).
-  const refresh = () => {
+  const refresh = useCallback(() => {
     if (!isSupabaseConfigured || !supabase) return Promise.resolve()
     return Promise.all([
       supabase
@@ -95,11 +94,8 @@ export default function useAdminDashboard() {
         .select('id, class_id, estado, classes(fecha, nombre, capacidad)')
         .eq('estado', 'confirmada')
         .gte('classes.fecha', today),
-      supabase
-        .from('pagos')
-        .select('monto, created_at'),
     ]).catch(() => null)
-  }
+  }, [today])
 
   return {
     ...metrics,

@@ -68,6 +68,8 @@ function AppContent() {
     return {
       id: authUser.id,
       email: authUser.email,
+      role: authUser.role || authUser.app_metadata?.gym_role || authUser.app_metadata?.role,
+      app_metadata: authUser.app_metadata,
       ...(profile || {}),
       nombre: profile?.nombre || 'Cliente',
     }
@@ -186,6 +188,12 @@ function AppContent() {
     },
     [pendingBooking, showToast]
   )
+
+  const handleNewMemberFromReception = useCallback(() => {
+    setAdminOpen(false)
+    setRegisterPlan('')
+    setRegisterOpen(true)
+  }, [])
 
   const handleLoginSuccess = useCallback(() => {
     setLoginOpen(false)
@@ -443,7 +451,9 @@ function AppContent() {
         open={isAdminOpen}
         onClose={() => setAdminOpen(false)}
         onToast={showToast}
+        onOpenNewMember={handleNewMemberFromReception}
         isAdminUser={isAdminUser(currentUser)}
+        staffRole={currentUser?.role || 'reception'}
       />
     </div>
   )
