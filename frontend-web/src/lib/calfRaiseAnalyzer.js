@@ -1,11 +1,3 @@
-// Analizador de elevación de pantorrillas (calf raises) en tiempo real.
-//
-// En lugar de confiar en el pequeño cambio del ángulo del tobillo, se valida el
-// desplazamiento vertical de los hombros: cuando la persona sube apoyándose en
-// la punta de los pies, la línea de los hombros se eleva y luego vuelve a su
-// posición inicial. La referencia (baseline) se ancla a la posición de pie más
-// baja detectada. Es lógica pura y testeable de forma aislada.
-
 export const CALF_STATES = {
   IDLE: 'IDLE',
   DOWN: 'DOWN',
@@ -23,26 +15,15 @@ export const CALF_STATE_LABELS = {
 }
 
 export const DEFAULT_CALF_CONFIG = {
-  // Subida requerida como fracción de la longitud de pierna visible.
   riseRatio: 0.06,
-  // Mínimo absoluto de subida (en coordenadas normalizadas 0..1).
   minRise: 0.012,
-  // Al bajar, la repetición cuenta cuando queda menos de esta fracción de la
-  // subida requerida (prácticamente de vuelta a la posición inicial).
   downThreshold: 0.15,
-  // Tras estabilizarse arriba, se sale a LOWERING cuando queda menos de esta
-  // fracción de la subida requerida.
   leaveRatio: 0.6,
-  // Si se abandona la elevación antes de estabilizarse, el ciclo no cuenta.
   partialRatio: 0.5,
-  // Estabilidad mínima en la posición alta (frames y/o milisegundos).
   minTopFrames: 3,
   minTopMs: 110,
-  // Histéresis en el eje Y (unidades normalizadas) para no alternar por ruido.
   hysteresis: 0.004,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -59,6 +40,8 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
   const yHistory = []
 
   const setFeedback = (message) => {
@@ -71,8 +54,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Pequeña media móvil propia del eje Y (el smoother del hook suaviza el
-  // ángulo; aquí la referencia vertical necesita su propio filtro).
   const smoothY = (value) => {
     yHistory.push(value)
     if (yHistory.length > Y_SMOOTH_WINDOW) yHistory.shift()
@@ -81,7 +62,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
 
   const requiredRise = (heightRef) => Math.max(config.minRise, config.riseRatio * (heightRef ?? 0))
 
-  // Transición genérica: DOWN -> RISING -> RAISED -> LOWERING -> DOWN
   const goTo = (next) => {
     state = next
   }
@@ -108,6 +88,7 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
     if (baselineY === null) baselineY = y
     const required = requiredRise(heightRef)
     const residual = baselineY - y
+    mainAngle = residual
 
     switch (state) {
       case CALF_STATES.IDLE:
@@ -118,8 +99,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
         break
 
       case CALF_STATES.DOWN:
-        // La referencia se ancla a la posición de pie más baja y se reajusta
-        // con suavidad cuando la persona está prácticamente de pie.
         if (y > baselineY) {
           baselineY = y
         } else if (residual < config.hysteresis) {
@@ -146,7 +125,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
             setFeedback('Punta de los pies')
           }
         } else {
-          // No llegó a la altura suficiente o volvió antes de estabilizarse.
           resetCycle()
           goTo(CALF_STATES.DOWN)
           setFeedback('Elevación más alta')
@@ -162,7 +140,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
             goTo(CALF_STATES.LOWERING)
             setFeedback('Baja a la posición inicial')
           } else {
-            // Se bajó sin mantener la punta: elevación no válida.
             resetCycle()
             goTo(CALF_STATES.DOWN)
             setFeedback('Mantén la punta un momento')
@@ -178,11 +155,11 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
         }
         if (baselineY - y <= required * config.downThreshold) {
           repCount += 1
+          isRepetition = true
           setFeedback('Repetición válida')
           resetCycle()
           goTo(CALF_STATES.DOWN)
         } else if (baselineY - y >= required) {
-          // Volvió a subir sin completar el descenso: sigue sin contar.
           goTo(CALF_STATES.RAISED)
         }
         break
@@ -195,16 +172,28 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: CALF_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      DOWN: 'UP',
+      RISING: 'DOWN',
+      RAISED: 'DOWN',
+      LOWERING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: CALF_STATE_LABELS[state] ?? 'Sin persona',
       baselineY,
       topFrames,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -225,9 +214,6 @@ export function createCalfRaiseAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para pantorrillas desde los landmarks de
-// MediaPipe. Se usan hombros y caderas para el desplazamiento vertical y el
-// pie para el ángulo de tobillo que se muestra como métrica.
 export const CALF_LANDMARKS = {
   leftShoulder: 11,
   rightShoulder: 12,

@@ -1,10 +1,3 @@
-// Analizador de rodillas arriba (high knees) en tiempo real.
-//
-// Compara ejes verticales: cada pierna cuenta una repetición cuando su rodilla
-// alcanza (o supera) la altura de la cadera del mismo lado. Para evitar contar
-// de más, una pierna debe volver a bajar claramente antes de volver a contar.
-// Lógica pura y testeable de forma aislada.
-
 export const HIGH_KNEE_STATES = {
   IDLE: 'IDLE',
   LOW: 'LOW',
@@ -18,15 +11,9 @@ export const HIGH_KNEE_STATE_LABELS = {
 }
 
 export const DEFAULT_HIGH_KNEE_CONFIG = {
-  // Margen fino hacia abajo de la cadera para detectar la elevación (la
-  // rodilla debe quedar a la altura de la cadera o por encima).
   upMargin: 0.005,
-  // La rodilla debe bajar claramente por debajo de la cadera antes de poder
-  // volver a contar (histéresis para evitar dobles cuentas por ruido).
   resetMargin: 0.02,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -39,6 +26,8 @@ export function createHighKneeAnalyzer(userConfig = {}) {
   let liftedRight = false
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -73,20 +62,21 @@ export function createHighKneeAnalyzer(userConfig = {}) {
     lastTrackedAt = timestamp
     const leftUp = leftKneeY <= leftHipY + config.upMargin
     const rightUp = rightKneeY <= rightHipY + config.upMargin
+    mainAngle = Math.min(leftKneeY, rightKneeY)
 
     let counted = false
-    // Cada pierna cuenta una repetición cuando su rodilla alcanza la cadera.
     if (leftUp && !liftedLeft) {
       liftedLeft = true
       repCount += 1
+      isRepetition = true
       counted = true
     }
     if (rightUp && !liftedRight) {
       liftedRight = true
       repCount += 1
+      isRepetition = true
       counted = true
     }
-    // La pierna vuelve a armarse sólo cuando baja claramente de la cadera.
     if (!leftUp && liftedLeft && leftKneeY > leftHipY + config.resetMargin) {
       liftedLeft = false
     }
@@ -109,15 +99,25 @@ export function createHighKneeAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: HIGH_KNEE_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      LOW: 'UP',
+      UP: 'DOWN',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: HIGH_KNEE_STATE_LABELS[state] ?? 'Sin persona',
       liftedLeft,
       liftedRight,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -136,9 +136,6 @@ export function createHighKneeAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para rodillas arriba desde los landmarks de
-// MediaPipe: cadera y rodilla de cada pierna, más el hombro (sólo para mostrar
-// el ángulo de cadera como métrica).
 export const HIGH_KNEE_LANDMARKS = {
   leftShoulder: 11,
   rightShoulder: 12,

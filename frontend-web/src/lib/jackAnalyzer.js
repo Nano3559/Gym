@@ -1,11 +1,3 @@
-// Analizador de polichinelas (jumping jacks) en tiempo real.
-//
-// Es una detección por distancias relativas y ejes: una repetición válida es
-// separar las piernas (el ángulo entre los tobillos visto desde la cadera se
-// abre) mientras las muñecas quedan por encima de la cabeza, y volver a la
-// posición inicial con los pies juntos. Lógica pura y testeable de forma
-// aislada.
-
 export const JACK_STATES = {
   IDLE: 'IDLE',
   READY: 'READY',
@@ -23,19 +15,12 @@ export const JACK_STATE_LABELS = {
 }
 
 export const DEFAULT_JACK_CONFIG = {
-  // Ángulo de separación (tobillo-cadera-tobillo) que considera "piernas abiertas".
   spreadDeg: 45,
-  // Ángulo para considerar las piernas juntas (posición inicial / fin de ciclo).
   readyDeg: 24,
-  // Margen (ejes normalizados) para considerar las muñecas a la altura de la
-  // cabeza o por encima de ella. Con y hacia abajo, encima = menor valor.
   wristsUpMargin: 0.03,
-  // Estabilidad mínima en la posición arriba (frames y/o milisegundos).
   minTopFrames: 2,
   minTopMs: 80,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -51,6 +36,8 @@ export function createJackAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -64,7 +51,6 @@ export function createJackAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: READY -> JUMPING -> UP -> RETURNING -> READY
   const goTo = (next) => {
     state = next
   }
@@ -87,6 +73,7 @@ export function createJackAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
+    mainAngle = spreadAngle
     const wristsUp =
       typeof wristLeftY === 'number' &&
       typeof wristRightY === 'number' &&
@@ -99,7 +86,6 @@ export function createJackAnalyzer(userConfig = {}) {
       case JACK_STATES.IDLE:
         goTo(JACK_STATES.READY)
         resetCycle()
-        // Si aparece ya con los pies juntos, queda lista para iniciar un ciclo.
         if (readyConditions) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -112,7 +98,6 @@ export function createJackAnalyzer(userConfig = {}) {
           topReached = false
           setFeedback('Posición inicial')
         } else if (topConditions) {
-          // Empieza el salto: sólo cuenta si veníamos de la posición inicial.
           if (armed) {
             goTo(JACK_STATES.JUMPING)
             topFrames = 0
@@ -134,7 +119,6 @@ export function createJackAnalyzer(userConfig = {}) {
             setFeedback('Pies abiertos, brazos arriba')
           }
         } else {
-          // Se cerró el salto antes de estabilizar la apertura: no es válido.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -150,7 +134,6 @@ export function createJackAnalyzer(userConfig = {}) {
             goTo(JACK_STATES.RETURNING)
             setFeedback('Junta los pies')
           } else {
-            // No se mantuvo lo suficiente arriba: movimiento no válido.
             resetCycle()
             armed = true
             goTo(JACK_STATES.READY)
@@ -163,6 +146,7 @@ export function createJackAnalyzer(userConfig = {}) {
         if (readyConditions) {
           if (topReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -171,7 +155,6 @@ export function createJackAnalyzer(userConfig = {}) {
           topSince = null
           goTo(JACK_STATES.READY)
         } else if (topConditions) {
-          // Volvió a abrir sin completar el cierre: sigue en ciclo inválido.
           goTo(JACK_STATES.UP)
         }
         break
@@ -184,16 +167,28 @@ export function createJackAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: JACK_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      READY: 'UP',
+      JUMPING: 'DOWN',
+      UP: 'DOWN',
+      RETURNING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: JACK_STATE_LABELS[state] ?? 'Sin persona',
       topReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -212,9 +207,6 @@ export function createJackAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para polichinelas desde los landmarks de
-// MediaPipe: cabeza y muñecas para el brazo arriba y caderas/tobillos para la
-// apertura de piernas.
 export const JACK_LANDMARKS = {
   nose: 0,
   leftEar: 7,
