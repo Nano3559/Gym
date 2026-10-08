@@ -1,11 +1,3 @@
-// Analizador de zancadas (lunges) en tiempo real.
-//
-// Usa los mismos puntos que la sentadilla (cadera, rodilla, tobillo) pero mide
-// la pierna delantera y la trasera de forma independiente. Una repetición es
-// válida cuando la rodilla delantera llega a ~90° mientras la rodilla trasera
-// baja (se dobla y queda por debajo de la delantera). Es lógica pura y
-// testeable de forma aislada.
-
 export const LUNGE_STATES = {
   IDLE: 'IDLE',
   STANDING: 'STANDING',
@@ -23,27 +15,16 @@ export const LUNGE_STATE_LABELS = {
 }
 
 export const DEFAULT_LUNGE_CONFIG = {
-  // Umbral para considerar ambas piernas estiradas y quedar "listo" para contar.
   standingAngle: 155,
-  // Umbral (rodilla delantera) que inicia el descenso.
   descendAngle: 145,
-  // Flexión mínima de la rodilla delantera (~90°) para la repetición.
   frontDepthAngle: 118,
-  // Al subir de la zona baja, se considera que ya está en ascenso.
   riseAngle: 138,
-  // La rodilla trasera debe quedar visiblemente flexionada (descendida).
   backFlexAngle: 150,
-  // Cuánto debe quedar la rodilla trasera POR DEBAJO de la delantera (unidades
-  // normalizadas) para distinguir la zancada de una sentadilla.
   backDrop: 0.05,
-  // Estabilidad mínima en la posición baja (frames y/o milisegundos).
   minBottomFrames: 3,
   minBottomMs: 110,
-  // Margen de histeresis para no alternar estados por ruido.
   hysteresis: 4,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -59,6 +40,8 @@ export function createLungeAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -72,7 +55,6 @@ export function createLungeAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: STANDING -> DESCENDING -> BOTTOM -> ASCENDING -> STANDING
   const goTo = (next) => {
     state = next
   }
@@ -82,7 +64,6 @@ export function createLungeAnalyzer(userConfig = {}) {
     front >= config.standingAngle - config.hysteresis &&
     back >= config.standingAngle - config.hysteresis
 
-  // Forma de zancada: la rodilla trasera doblada y por debajo de la delantera.
   const shapeOk = (frontY, backY, backAngle) => {
     const backBent = typeof backAngle === 'number' && backAngle <= config.backFlexAngle
     const backLower =
@@ -102,12 +83,12 @@ export function createLungeAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
+    mainAngle = frontKneeAngle
 
     switch (state) {
       case LUNGE_STATES.IDLE:
         goTo(LUNGE_STATES.STANDING)
         resetCycle()
-        // Si la persona aparece ya de pie, queda lista para iniciar un ciclo.
         if (bothExtended(frontKneeAngle, backKneeAngle)) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -120,7 +101,6 @@ export function createLungeAnalyzer(userConfig = {}) {
           depthReached = false
           setFeedback('Posición inicial')
         } else if (frontKneeAngle < config.descendAngle) {
-          // Empieza el descenso: sólo cuenta si veníamos de pie.
           if (armed) {
             goTo(LUNGE_STATES.DESCENDING)
             cycleStart = timestamp
@@ -137,7 +117,6 @@ export function createLungeAnalyzer(userConfig = {}) {
           bottomSince = timestamp
           setFeedback(shapeOk(frontKneeY, backKneeY, backKneeAngle) ? 'Buena zancada' : 'Baja la rodilla trasera')
         } else if (frontKneeAngle > config.standingAngle - config.hysteresis) {
-          // Se arrepintió antes de bajar: reinicia sin contar.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -155,7 +134,6 @@ export function createLungeAnalyzer(userConfig = {}) {
             goTo(LUNGE_STATES.ASCENDING)
             setFeedback('Sube')
           } else {
-            // Bajó poco, no se mantuvo o no completó la zancada: no es válida.
             resetCycle()
             armed = true
             goTo(LUNGE_STATES.STANDING)
@@ -172,6 +150,7 @@ export function createLungeAnalyzer(userConfig = {}) {
         if (bothExtended(frontKneeAngle, backKneeAngle)) {
           if (depthReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -180,7 +159,6 @@ export function createLungeAnalyzer(userConfig = {}) {
           bottomSince = null
           goTo(LUNGE_STATES.STANDING)
         } else if (frontKneeAngle <= config.frontDepthAngle) {
-          // Volvió a bajar sin completar el ascenso: sigue en ciclo inválido.
           goTo(LUNGE_STATES.DESCENDING)
         }
         break
@@ -193,16 +171,28 @@ export function createLungeAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: LUNGE_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      STANDING: 'UP',
+      DESCENDING: 'DOWN',
+      BOTTOM: 'DOWN',
+      ASCENDING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: LUNGE_STATE_LABELS[state] ?? 'Sin persona',
       depthReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -221,7 +211,6 @@ export function createLungeAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para zancadas desde los landmarks de MediaPipe.
 export const LUNGE_LANDMARKS = {
   leftHip: 23,
   rightHip: 24,

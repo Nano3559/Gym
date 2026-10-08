@@ -1,9 +1,3 @@
-// Analizador de sentadillas en tiempo real.
-//
-// Recibe únicamente datos de pose (ángulos y posiciones relativas) y decide
-// en qué estado está la persona, si una repetición es válida y qué mensaje
-// mostrar. No toca React ni el DOM: es lógica pura y testeable de forma aislada.
-
 export const SQUAT_STATES = {
   IDLE: 'IDLE',
   STANDING: 'STANDING',
@@ -21,22 +15,14 @@ export const STATE_LABELS = {
 }
 
 export const DEFAULT_SQUAT_CONFIG = {
-  // Umbral para considerar que la persona está erguida y "lista" para contar.
   standingAngle: 158,
-  // Umbral que inicia el descenso.
   descendAngle: 148,
-  // Profundidad mínima (ángulo de rodilla cerrado) para que la repetición cuente.
   depthAngle: 102,
-  // Al subir de la zona baja, se considera que ya está en ascenso.
   riseAngle: 122,
-  // Estabilidad mínima en la posición baja (frames y/o milisegundos).
   minBottomFrames: 3,
   minBottomMs: 110,
-  // Margen de histeresis para no alternar estados por ruido.
   hysteresis: 4,
-  // Visibilidad mínima de los_landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -52,6 +38,8 @@ export function createSquatAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -65,7 +53,6 @@ export function createSquatAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: STANDING -> DESCENDING -> BOTTOM -> ASCENDING -> STANDING
   const goTo = (next) => {
     state = next
   }
@@ -82,13 +69,13 @@ export function createSquatAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
+    mainAngle = kneeAngle
     const hipBelowKnee = Boolean(hip && knee && hip.y >= knee.y - 0.03)
 
     switch (state) {
       case SQUAT_STATES.IDLE:
         goTo(SQUAT_STATES.STANDING)
         resetCycle()
-        // Si la persona aparece ya de pie, queda lista para iniciar un ciclo.
         if (kneeAngle >= config.standingAngle) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -101,7 +88,6 @@ export function createSquatAnalyzer(userConfig = {}) {
           depthReached = false
           setFeedback('Posición inicial')
         } else if (kneeAngle < config.descendAngle) {
-          // Empieza el descenso: sólo cuenta si veníamos de pie.
           if (armed) {
             goTo(SQUAT_STATES.DESCENDING)
             cycleStart = timestamp
@@ -118,7 +104,6 @@ export function createSquatAnalyzer(userConfig = {}) {
           bottomSince = timestamp
           setFeedback(hipBelowKnee ? 'Buena sentadilla' : 'Baja un poco más')
         } else if (kneeAngle > config.standingAngle - config.hysteresis) {
-          // Se.arrepintió antes de bajar: reinicia sin contar.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -134,7 +119,6 @@ export function createSquatAnalyzer(userConfig = {}) {
             goTo(SQUAT_STATES.ASCENDING)
             setFeedback('Sube')
           } else {
-            // Bajó poco o no se mantuvo: movimiento no válido.
             resetCycle()
             armed = true
             goTo(SQUAT_STATES.STANDING)
@@ -149,6 +133,7 @@ export function createSquatAnalyzer(userConfig = {}) {
         if (kneeAngle >= config.standingAngle - config.hysteresis) {
           if (depthReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -157,7 +142,6 @@ export function createSquatAnalyzer(userConfig = {}) {
           bottomSince = null
           goTo(SQUAT_STATES.STANDING)
         } else if (kneeAngle < config.depthAngle) {
-          // Volvió a bajar sin completar el ascenso: sigue en ciclo inválido.
           goTo(SQUAT_STATES.DESCENDING)
         }
         break
@@ -170,16 +154,28 @@ export function createSquatAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      STANDING: 'UP',
+      DESCENDING: 'DOWN',
+      BOTTOM: 'DOWN',
+      ASCENDING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: STATE_LABELS[state] ?? 'Sin persona',
       depthReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -198,7 +194,6 @@ export function createSquatAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para sentadilla desde los landmarks de MediaPipe.
 export const SQUAT_LANDMARKS = {
   leftHip: 23,
   rightHip: 24,

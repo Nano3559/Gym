@@ -1,10 +1,3 @@
-// Analizador de curl de bíceps en tiempo real.
-//
-// Usa los mismos landmarks que la flexión (hombro, codo, muñeca) y solo cambian
-// las condiciones: el brazo estirado (~160°) es la posición inicial y el brazo
-// flexionado (~30°) marca el punto medio de la repetición. Lógica pura y
-// testeable de forma aislada, igual que el analizador de sentadillas.
-
 export const CURL_STATES = {
   IDLE: 'IDLE',
   EXTENDED: 'EXTENDED',
@@ -22,22 +15,14 @@ export const CURL_STATE_LABELS = {
 }
 
 export const DEFAULT_CURL_CONFIG = {
-  // Umbral para considerar el brazo estirado y "listo" para contar.
   extendedAngle: 158,
-  // Umbral que inicia la flexión del codo.
   flexAngle: 148,
-  // Codo máximo (brazo flexionado ~30°) para que la repetición cuente.
   peakAngle: 35,
-  // Al abrir el codo desde la contracción, se considera que ya extiende.
   extendAngle: 50,
-  // Estabilidad mínima en la contracción máxima (frames y/o milisegundos).
   minPeakFrames: 3,
   minPeakMs: 110,
-  // Margen de histeresis para no alternar estados por ruido.
   hysteresis: 4,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -53,6 +38,8 @@ export function createCurlAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -66,7 +53,6 @@ export function createCurlAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: EXTENDED -> FLEXING -> FLEXED -> EXTENDING -> EXTENDED
   const goTo = (next) => {
     state = next
   }
@@ -83,12 +69,12 @@ export function createCurlAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
+    mainAngle = elbowAngle
 
     switch (state) {
       case CURL_STATES.IDLE:
         goTo(CURL_STATES.EXTENDED)
         resetCycle()
-        // Si aparece con el brazo ya estirado, queda listo para iniciar un ciclo.
         if (elbowAngle >= config.extendedAngle) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -101,7 +87,6 @@ export function createCurlAnalyzer(userConfig = {}) {
           depthReached = false
           setFeedback('Posición inicial')
         } else if (elbowAngle < config.flexAngle) {
-          // Empieza la flexión: sólo cuenta si veníamos del brazo estirado.
           if (armed) {
             goTo(CURL_STATES.FLEXING)
             cycleStart = timestamp
@@ -118,7 +103,6 @@ export function createCurlAnalyzer(userConfig = {}) {
           peakSince = timestamp
           setFeedback('Contracción completa')
         } else if (elbowAngle > config.extendedAngle - config.hysteresis) {
-          // Se arrepintió antes de flexionar: reinicia sin contar.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -134,7 +118,6 @@ export function createCurlAnalyzer(userConfig = {}) {
             goTo(CURL_STATES.EXTENDING)
             setFeedback('Extiende el brazo')
           } else {
-            // No llegó a la contracción o no se mantuvo: movimiento no válido.
             resetCycle()
             armed = true
             goTo(CURL_STATES.EXTENDED)
@@ -149,6 +132,7 @@ export function createCurlAnalyzer(userConfig = {}) {
         if (elbowAngle >= config.extendedAngle - config.hysteresis) {
           if (depthReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -157,7 +141,6 @@ export function createCurlAnalyzer(userConfig = {}) {
           peakSince = null
           goTo(CURL_STATES.EXTENDED)
         } else if (elbowAngle < config.peakAngle) {
-          // Volvió a flexionar sin completar la extensión: ciclo inválido.
           goTo(CURL_STATES.FLEXING)
         }
         break
@@ -170,16 +153,28 @@ export function createCurlAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: CURL_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      EXTENDED: 'UP',
+      FLEXING: 'DOWN',
+      FLEXED: 'DOWN',
+      EXTENDING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: CURL_STATE_LABELS[state] ?? 'Sin persona',
       depthReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -198,7 +193,6 @@ export function createCurlAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para el curl desde los landmarks de MediaPipe.
 export const CURL_LANDMARKS = {
   leftShoulder: 11,
   rightShoulder: 12,

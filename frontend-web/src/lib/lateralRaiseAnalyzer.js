@@ -1,9 +1,3 @@
-// Analizador de elevaciones laterales de hombro en tiempo real.
-//
-// El ángulo se mide en el hombro (cadera -> hombro -> codo): ~15° con los
-// brazos caídos es la posición inicial y ~80°-90° (brazos en "T") marca el
-// punto medio de la repetición. Lógica pura y testeable de forma aislada.
-
 export const RAISE_STATES = {
   IDLE: 'IDLE',
   DOWN: 'DOWN',
@@ -21,20 +15,13 @@ export const RAISE_STATE_LABELS = {
 }
 
 export const DEFAULT_RAISE_CONFIG = {
-  // Ángulo máximo para considerar los brazos caídos y "listo" para contar.
   downAngle: 30,
-  // Umbral que inicia la elevación.
   raiseAngle: 35,
-  // Ángulo mínimo (brazos en "T") para que la repetición cuente.
   topAngle: 78,
-  // Estabilidad mínima en la posición alta (frames y/o milisegundos).
   minTopFrames: 3,
   minTopMs: 110,
-  // Margen de histeresis para no alternar estados por ruido.
   hysteresis: 4,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -50,6 +37,8 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -63,7 +52,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: DOWN -> RAISING -> RAISED -> LOWERING -> DOWN
   const goTo = (next) => {
     state = next
   }
@@ -80,12 +68,12 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
+    mainAngle = shoulderAngle
 
     switch (state) {
       case RAISE_STATES.IDLE:
         goTo(RAISE_STATES.DOWN)
         resetCycle()
-        // Si aparece con los brazos caídos, queda listo para iniciar un ciclo.
         if (shoulderAngle <= config.downAngle) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -98,7 +86,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
           depthReached = false
           setFeedback('Posición inicial')
         } else if (shoulderAngle > config.raiseAngle) {
-          // Empieza la elevación: sólo cuenta si veníamos con los brazos abajo.
           if (armed) {
             goTo(RAISE_STATES.RAISING)
             cycleStart = timestamp
@@ -115,7 +102,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
           topSince = timestamp
           setFeedback(shoulderAngle >= config.topAngle + 4 ? 'Buena elevación' : 'Sube un poco más')
         } else if (shoulderAngle <= config.downAngle - config.hysteresis) {
-          // Se arrepintió antes de elevar: reinicia sin contar.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -131,7 +117,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
             goTo(RAISE_STATES.LOWERING)
             setFeedback('Baja los brazos')
           } else {
-            // No llegó a la "T" o no se mantuvo: movimiento no válido.
             resetCycle()
             armed = true
             goTo(RAISE_STATES.DOWN)
@@ -148,6 +133,7 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
         if (shoulderAngle <= config.downAngle) {
           if (depthReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -156,7 +142,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
           topSince = null
           goTo(RAISE_STATES.DOWN)
         } else if (shoulderAngle >= config.topAngle) {
-          // Volvió a subir sin completar el descenso: ciclo inválido.
           goTo(RAISE_STATES.RAISED)
         }
         break
@@ -169,16 +154,28 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: RAISE_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      DOWN: 'UP',
+      RAISING: 'DOWN',
+      RAISED: 'DOWN',
+      LOWERING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: RAISE_STATE_LABELS[state] ?? 'Sin persona',
       depthReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -197,7 +194,6 @@ export function createLateralRaiseAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para las elevaciones desde los landmarks.
 export const RAISE_LANDMARKS = {
   leftHip: 23,
   rightHip: 24,

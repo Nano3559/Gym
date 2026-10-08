@@ -1,10 +1,3 @@
-// Analizador de flexiones en tiempo real.
-//
-// Sigue el mismo esquema que el analizador de sentadillas: recibe únicamente
-// datos de pose (ángulos y alineación corporal) y decide en qué estado está
-// la persona, si una repetición es válida y qué mensaje mostrar. No toca React
-// ni el DOM: es lógica pura y testeable de forma aislada.
-
 export const PUSHUP_STATES = {
   IDLE: 'IDLE',
   TOP: 'TOP',
@@ -22,24 +15,15 @@ export const PUSHUP_STATE_LABELS = {
 }
 
 export const DEFAULT_PUSHUP_CONFIG = {
-  // Umbral para considerar los brazos extendidos y quedar "listo" para contar.
   topAngle: 158,
-  // Umbral que inicia el descenso.
   descendAngle: 148,
-  // Profundidad mínima (codo cerrado) para que la repetición cuente.
   depthAngle: 96,
-  // Al subir de la zona baja, se considera que ya está en ascenso.
   riseAngle: 118,
-  // Alineación mínima del cuerpo: hombro -> cadera -> tobillo (plancha recta).
   minBodyAngle: 150,
-  // Estabilidad mínima en la posición baja (frames y/o milisegundos).
   minBottomFrames: 3,
   minBottomMs: 110,
-  // Margen de histeresis para no alternar estados por ruido.
   hysteresis: 4,
-  // Visibilidad mínima de los landmarks clave (MediaPipe 0..1).
   minVisibility: 0.55,
-  // Si no hay pose válida durante este tiempo, se resetea el contador de ciclo.
   trackingTimeoutMs: 900,
 }
 
@@ -55,6 +39,8 @@ export function createPushupAnalyzer(userConfig = {}) {
   let cycleStart = null
   let lastTrackedAt = null
   let lastFeedback = ''
+  let isRepetition = false
+  let mainAngle = null
 
   const setFeedback = (message) => {
     lastFeedback = message
@@ -68,7 +54,6 @@ export function createPushupAnalyzer(userConfig = {}) {
     cycleStart = null
   }
 
-  // Transición genérica: TOP -> DESCENDING -> BOTTOM -> ASCENDING -> TOP
   const goTo = (next) => {
     state = next
   }
@@ -85,7 +70,7 @@ export function createPushupAnalyzer(userConfig = {}) {
     }
 
     lastTrackedAt = timestamp
-    // Sin dato de alineación no se penaliza: solo se exige cuando se mide.
+    mainAngle = elbowAngle
     const bodyOk =
       typeof bodyAngle === 'number' && !Number.isNaN(bodyAngle) ? bodyAngle >= config.minBodyAngle : true
 
@@ -93,7 +78,6 @@ export function createPushupAnalyzer(userConfig = {}) {
       case PUSHUP_STATES.IDLE:
         goTo(PUSHUP_STATES.TOP)
         resetCycle()
-        // Si la persona aparece con los brazos estirados, queda lista para iniciar un ciclo.
         if (elbowAngle >= config.topAngle) {
           armed = true
           setFeedback('Posición inicial lista')
@@ -106,7 +90,6 @@ export function createPushupAnalyzer(userConfig = {}) {
           depthReached = false
           setFeedback('Posición inicial')
         } else if (elbowAngle < config.descendAngle) {
-          // Empieza el descenso: sólo cuenta si veníamos de arriba.
           if (armed) {
             goTo(PUSHUP_STATES.DESCENDING)
             cycleStart = timestamp
@@ -123,7 +106,6 @@ export function createPushupAnalyzer(userConfig = {}) {
           bottomSince = timestamp
           setFeedback(bodyOk ? 'Buena flexión' : 'Cuerpo recto, sin cerrar las caderas')
         } else if (elbowAngle > config.topAngle - config.hysteresis) {
-          // Se arrepintió antes de bajar: reinicia sin contar.
           resetCycle()
           armed = true
           setFeedback('Posición inicial')
@@ -141,7 +123,6 @@ export function createPushupAnalyzer(userConfig = {}) {
             goTo(PUSHUP_STATES.ASCENDING)
             setFeedback('Sube')
           } else {
-            // Bajó poco, no se mantuvo o perdió la alineación: no es válida.
             resetCycle()
             armed = true
             goTo(PUSHUP_STATES.TOP)
@@ -158,6 +139,7 @@ export function createPushupAnalyzer(userConfig = {}) {
         if (elbowAngle >= config.topAngle - config.hysteresis) {
           if (depthReached) {
             repCount += 1
+            isRepetition = true
             setFeedback('Repetición válida')
           }
           armed = true
@@ -166,7 +148,6 @@ export function createPushupAnalyzer(userConfig = {}) {
           bottomSince = null
           goTo(PUSHUP_STATES.TOP)
         } else if (elbowAngle < config.depthAngle) {
-          // Volvió a bajar sin completar el ascenso: sigue en ciclo inválido.
           goTo(PUSHUP_STATES.DESCENDING)
         }
         break
@@ -179,16 +160,28 @@ export function createPushupAnalyzer(userConfig = {}) {
   }
 
   function snapshot() {
-    return {
-      state,
-      stateLabel: PUSHUP_STATE_LABELS[state] ?? 'Sin persona',
+    const postureMap = {
+      IDLE: 'IDLE',
+      TOP: 'UP',
+      DESCENDING: 'DOWN',
+      BOTTOM: 'DOWN',
+      ASCENDING: 'UP',
+    }
+    const snap = {
+      isRepetition,
       repCount,
       feedback: lastFeedback,
+      angle: mainAngle,
+      postureState: postureMap[state] || 'IDLE',
+      state,
+      stateLabel: PUSHUP_STATE_LABELS[state] ?? 'Sin persona',
       depthReached,
       armed,
       cycleStart,
       lastTrackedAt,
     }
+    isRepetition = false
+    return snap
   }
 
   function reset() {
@@ -207,7 +200,6 @@ export function createPushupAnalyzer(userConfig = {}) {
   return { update, snapshot, reset, resetReps, config }
 }
 
-// Extrae los puntos necesarios para flexiones desde los landmarks de MediaPipe.
 export const PUSHUP_LANDMARKS = {
   leftShoulder: 11,
   rightShoulder: 12,
