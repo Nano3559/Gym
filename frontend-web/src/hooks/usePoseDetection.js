@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { angleAt, createSmoother } from '../lib/geometry'
+import { angleAt, createSmoother, midPoint } from '../lib/geometry'
 import { SQUAT_LANDMARKS, createSquatAnalyzer } from '../lib/squatAnalyzer'
 import { PUSHUP_LANDMARKS, createPushupAnalyzer } from '../lib/pushupAnalyzer'
+import { CURL_LANDMARKS, createCurlAnalyzer } from '../lib/curlAnalyzer'
+import { RAISE_LANDMARKS, createLateralRaiseAnalyzer } from '../lib/lateralRaiseAnalyzer'
+import { LUNGE_LANDMARKS, createLungeAnalyzer } from '../lib/lungeAnalyzer'
+import { CALF_LANDMARKS, createCalfRaiseAnalyzer } from '../lib/calfRaiseAnalyzer'
+import { JACK_LANDMARKS, createJackAnalyzer } from '../lib/jackAnalyzer'
+import { HIGH_KNEE_LANDMARKS, createHighKneeAnalyzer } from '../lib/highKneeAnalyzer'
 
 // Detección de pose 100% local con MediaPipe Tasks Vision.
 // No se envía ningún frame a ninguna API de IA: el modelo se descarga una vez
@@ -20,6 +26,11 @@ const IDLE_STATE = {
   kneeAngle: null,
   elbowAngle: null,
   bodyAngle: null,
+  shoulderAngle: null,
+  backKneeAngle: null,
+  ankleAngle: null,
+  spreadAngle: null,
+  hipAngle: null,
 }
 
 // Configuración por ejercicio: qué analizador usar, qué articulaciones medir y
@@ -81,6 +92,271 @@ const EXERCISE_SETUP = {
         wrist: null,
         hip: null,
         ankle: null,
+        visibility: 0,
+        timestamp,
+      }
+    },
+  },
+  curl: {
+    createAnalyzer: createCurlAnalyzer,
+    metricKey: 'elbowAngle',
+    sides: [
+      [
+        CURL_LANDMARKS.leftShoulder,
+        CURL_LANDMARKS.leftElbow,
+        CURL_LANDMARKS.leftWrist,
+      ],
+      [
+        CURL_LANDMARKS.rightShoulder,
+        CURL_LANDMARKS.rightElbow,
+        CURL_LANDMARKS.rightWrist,
+      ],
+    ],
+    measure(points, smoother) {
+      const [shoulder, elbow, wrist] = points
+      const elbowAngle = smoother.push(angleAt(shoulder, elbow, wrist))
+      const visibility = Math.min(shoulder.visibility ?? 1, elbow.visibility ?? 1, wrist.visibility ?? 1)
+      return { input: { elbowAngle, shoulder, elbow, wrist, visibility }, state: { elbowAngle } }
+    },
+    lostInput(timestamp) {
+      return {
+        elbowAngle: null,
+        shoulder: null,
+        elbow: null,
+        wrist: null,
+        visibility: 0,
+        timestamp,
+      }
+    },
+  },
+  lateralRaise: {
+    createAnalyzer: createLateralRaiseAnalyzer,
+    metricKey: 'shoulderAngle',
+    sides: [
+      [
+        RAISE_LANDMARKS.leftHip,
+        RAISE_LANDMARKS.leftShoulder,
+        RAISE_LANDMARKS.leftElbow,
+      ],
+      [
+        RAISE_LANDMARKS.rightHip,
+        RAISE_LANDMARKS.rightShoulder,
+        RAISE_LANDMARKS.rightElbow,
+      ],
+    ],
+    measure(points, smoother) {
+      const [hip, shoulder, elbow] = points
+      const shoulderAngle = smoother.push(angleAt(hip, shoulder, elbow))
+      const visibility = Math.min(hip.visibility ?? 1, shoulder.visibility ?? 1, elbow.visibility ?? 1)
+      return { input: { shoulderAngle, hip, shoulder, elbow, visibility }, state: { shoulderAngle } }
+    },
+    lostInput(timestamp) {
+      return {
+        shoulderAngle: null,
+        hip: null,
+        shoulder: null,
+        elbow: null,
+        visibility: 0,
+        timestamp,
+      }
+    },
+  },
+  lunge: {
+    createAnalyzer: createLungeAnalyzer,
+    metricKey: 'frontKneeAngle',
+    sides: [
+      [
+        LUNGE_LANDMARKS.leftHip,
+        LUNGE_LANDMARKS.leftKnee,
+        LUNGE_LANDMARKS.leftAnkle,
+        LUNGE_LANDMARKS.rightHip,
+        LUNGE_LANDMARKS.rightKnee,
+        LUNGE_LANDMARKS.rightAnkle,
+      ],
+    ],
+    measure(points, smoother) {
+      const [leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle] = points
+      const leftAngle = angleAt(leftHip, leftKnee, leftAnkle)
+      const rightAngle = angleAt(rightHip, rightKnee, rightAnkle)
+      const visibility = Math.min(
+        leftHip.visibility ?? 1,
+        leftKnee.visibility ?? 1,
+        leftAnkle.visibility ?? 1,
+        rightHip.visibility ?? 1,
+        rightKnee.visibility ?? 1,
+        rightAnkle.visibility ?? 1,
+      )
+      if (leftAngle === null || rightAngle === null) {
+        const present = [leftAngle ?? rightAngle].filter((value) => value !== null)
+        const frontKneeAngle = present.length ? smoother.push(present[0]) : null
+        return {
+          input: { frontKneeAngle, backKneeAngle: null, frontKneeY: null, backKneeY: null, visibility },
+          state: { frontKneeAngle, backKneeAngle: null },
+        }
+      }
+      // Pierna delantera = la que tiene el tobillo más alineado con su cadera
+      // (menor distancia horizontal): es la que carga el peso en la zancada.
+      const leftSpan = Math.abs(leftHip.x - leftAnkle.x)
+      const rightSpan = Math.abs(rightHip.x - rightAnkle.x)
+      const frontLeft = leftSpan <= rightSpan
+      const front = frontLeft ? leftAngle : rightAngle
+      const back = frontLeft ? rightAngle : leftAngle
+      const frontKneeY = frontLeft ? leftKnee.y : rightKnee.y
+      const backKneeY = frontLeft ? rightKnee.y : leftKnee.y
+      const frontKneeAngle = smoother.push(front)
+      return {
+        input: { frontKneeAngle, backKneeAngle: back, frontKneeY, backKneeY, visibility },
+        state: { frontKneeAngle, backKneeAngle: back },
+      }
+    },
+    lostInput(timestamp) {
+      return {
+        frontKneeAngle: null,
+        backKneeAngle: null,
+        frontKneeY: null,
+        backKneeY: null,
+        visibility: 0,
+        timestamp,
+      }
+    },
+  },
+  calfRaise: {
+    createAnalyzer: createCalfRaiseAnalyzer,
+    metricKey: 'ankleAngle',
+    sides: [
+      [
+        CALF_LANDMARKS.leftShoulder,
+        CALF_LANDMARKS.rightShoulder,
+        CALF_LANDMARKS.leftHip,
+        CALF_LANDMARKS.rightHip,
+        CALF_LANDMARKS.leftKnee,
+        CALF_LANDMARKS.rightKnee,
+        CALF_LANDMARKS.leftAnkle,
+        CALF_LANDMARKS.rightAnkle,
+        CALF_LANDMARKS.leftFootIndex,
+        CALF_LANDMARKS.rightFootIndex,
+      ],
+    ],
+    measure(points, smoother) {
+      const [leftShoulder, rightShoulder, leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle, leftFoot, rightFoot] =
+        points
+      const shoulderY = (leftShoulder.y + rightShoulder.y) / 2
+      const hipY = (leftHip.y + rightHip.y) / 2
+      const ankleY = (leftAnkle.y + rightAnkle.y) / 2
+      const heightRef = Math.abs(hipY - ankleY)
+      const visibility = Math.min(
+        leftShoulder.visibility ?? 1,
+        rightShoulder.visibility ?? 1,
+        leftHip.visibility ?? 1,
+        rightHip.visibility ?? 1,
+        leftAnkle.visibility ?? 1,
+        rightAnkle.visibility ?? 1,
+      )
+      const leftAngle = leftFoot ? angleAt(leftKnee, leftAnkle, leftFoot) : null
+      const rightAngle = rightFoot ? angleAt(rightKnee, rightAnkle, rightFoot) : null
+      const leftVis = leftFoot ? (leftKnee.visibility ?? 1) + (leftAnkle.visibility ?? 1) + (leftFoot.visibility ?? 1) : 0
+      const rightVis = rightFoot ? (rightKnee.visibility ?? 1) + (rightAnkle.visibility ?? 1) + (rightFoot.visibility ?? 1) : 0
+      const angle =
+        leftAngle === null ? rightAngle : rightAngle === null ? leftAngle : leftVis >= rightVis ? leftAngle : rightAngle
+      const ankleAngle = angle === null ? null : smoother.push(angle)
+      return { input: { shoulderY, heightRef, visibility }, state: { ankleAngle } }
+    },
+    lostInput(timestamp) {
+      return { shoulderY: null, heightRef: null, visibility: 0, timestamp }
+    },
+  },
+  jack: {
+    createAnalyzer: createJackAnalyzer,
+    metricKey: 'spreadAngle',
+    sides: [
+      [
+        JACK_LANDMARKS.nose,
+        JACK_LANDMARKS.leftEar,
+        JACK_LANDMARKS.rightEar,
+        JACK_LANDMARKS.leftWrist,
+        JACK_LANDMARKS.rightWrist,
+        JACK_LANDMARKS.leftHip,
+        JACK_LANDMARKS.rightHip,
+        JACK_LANDMARKS.leftAnkle,
+        JACK_LANDMARKS.rightAnkle,
+      ],
+    ],
+    measure(points, smoother) {
+      const [nose, leftEar, rightEar, leftWrist, rightWrist, leftHip, rightHip, leftAnkle, rightAnkle] = points
+      const headY = Math.min(nose.y, leftEar.y, rightEar.y)
+      const hipMid = midPoint(leftHip, rightHip)
+      const spreadAngle = hipMid ? smoother.push(angleAt(leftAnkle, hipMid, rightAnkle)) : null
+      const visibility = Math.min(
+        nose.visibility ?? 1,
+        leftEar.visibility ?? 1,
+        rightEar.visibility ?? 1,
+        leftWrist.visibility ?? 1,
+        rightWrist.visibility ?? 1,
+        leftHip.visibility ?? 1,
+        rightHip.visibility ?? 1,
+        leftAnkle.visibility ?? 1,
+        rightAnkle.visibility ?? 1,
+      )
+      return {
+        input: { spreadAngle, headY, wristLeftY: leftWrist.y, wristRightY: rightWrist.y, visibility },
+        state: { spreadAngle },
+      }
+    },
+    lostInput(timestamp) {
+      return {
+        spreadAngle: null,
+        headY: null,
+        wristLeftY: null,
+        wristRightY: null,
+        visibility: 0,
+        timestamp,
+      }
+    },
+  },
+  highKnee: {
+    createAnalyzer: createHighKneeAnalyzer,
+    metricKey: 'hipAngle',
+    sides: [
+      [
+        HIGH_KNEE_LANDMARKS.leftHip,
+        HIGH_KNEE_LANDMARKS.leftKnee,
+        HIGH_KNEE_LANDMARKS.leftShoulder,
+        HIGH_KNEE_LANDMARKS.rightHip,
+        HIGH_KNEE_LANDMARKS.rightKnee,
+        HIGH_KNEE_LANDMARKS.rightShoulder,
+      ],
+    ],
+    measure(points, smoother) {
+      const [leftHip, leftKnee, leftShoulder, rightHip, rightKnee, rightShoulder] = points
+      const leftAngle = angleAt(leftKnee, leftHip, leftShoulder)
+      const rightAngle = angleAt(rightKnee, rightHip, rightShoulder)
+      const angles = [leftAngle, rightAngle].filter((value) => value !== null)
+      const hipAngle = angles.length ? smoother.push(Math.min(...angles)) : null
+      const visibility = Math.min(
+        leftHip.visibility ?? 1,
+        leftKnee.visibility ?? 1,
+        leftShoulder.visibility ?? 1,
+        rightHip.visibility ?? 1,
+        rightKnee.visibility ?? 1,
+        rightShoulder.visibility ?? 1,
+      )
+      return {
+        input: {
+          leftKneeY: leftKnee.y,
+          rightKneeY: rightKnee.y,
+          leftHipY: leftHip.y,
+          rightHipY: rightHip.y,
+          visibility,
+        },
+        state: { hipAngle },
+      }
+    },
+    lostInput(timestamp) {
+      return {
+        leftKneeY: null,
+        rightKneeY: null,
+        leftHipY: null,
+        rightHipY: null,
         visibility: 0,
         timestamp,
       }
