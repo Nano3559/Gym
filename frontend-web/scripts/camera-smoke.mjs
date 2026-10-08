@@ -278,6 +278,145 @@ try {
     JSON.stringify(flex),
   )
 
+  // Curl de bíceps: métrica de codo.
+  const curl = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Curl de bíceps$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Curl de bíceps no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsCodo: /Codo/i.test(text),
+        showsCurl: /Curl de bíceps/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: curl de bíceps seleccionable y métrica de codo',
+    curl?.pillFound && curl?.showsCodo === true && curl?.showsCurl === true,
+    JSON.stringify(curl),
+  )
+
+  // Elevaciones laterales: métrica de hombro.
+  const lateral = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Elevaciones laterales$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Elevaciones laterales no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsHombro: /Hombro/i.test(text),
+        showsLateral: /Elevaciones laterales/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: elevaciones laterales seleccionables y métrica de hombro',
+    lateral?.pillFound && lateral?.showsHombro === true && lateral?.showsLateral === true,
+    JSON.stringify(lateral),
+  )
+
+  // Zancadas: rodilla delantera + rodilla trasera.
+  const lunge = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Zancadas$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Zancadas no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsDelantera: /Rodilla delantera/i.test(text),
+        showsTrasera: /Rodilla trasera/i.test(text),
+        showsLunge: /Zancadas/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: zancadas seleccionables con rodilla delantera y trasera',
+    lunge?.pillFound && lunge?.showsDelantera === true && lunge?.showsTrasera === true,
+    JSON.stringify(lunge),
+  )
+
+  // Elevación de pantorrillas: métrica de tobillo.
+  const calf = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Elevación de pantorrillas$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Elevación de pantorrillas no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsTobillo: /Tobillo/i.test(text),
+        showsCalf: /Elevación de pantorrillas/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: elevación de pantorrillas seleccionable y métrica de tobillo',
+    calf?.pillFound && calf?.showsTobillo === true && calf?.showsCalf === true,
+    JSON.stringify(calf),
+  )
+
+  // Polichinelas: métrica de piernas.
+  const jack = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Polichinelas$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Polichinelas no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsPiernas: /Piernas/i.test(text),
+        showsJack: /Polichinelas/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: polichinelas seleccionables y métrica de piernas',
+    jack?.pillFound && jack?.showsPiernas === true && jack?.showsJack === true,
+    JSON.stringify(jack),
+  )
+
+  // Rodillas arriba: métrica de cadera.
+  const highKnee = await evaluate(
+    client,
+    `(async () => {
+      const pill = [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^Rodillas arriba$/i.test(b.textContent.trim()));
+      if (!pill) return { error: 'pestana Rodillas arriba no encontrada' };
+      pill.click();
+      await new Promise((r) => setTimeout(r, 600));
+      const text = document.querySelector('[role="dialog"]').innerText;
+      return {
+        pillFound: true,
+        showsCadera: /Cadera/i.test(text),
+        showsHighKnee: /Rodillas arriba/i.test(text),
+        snippet: text.replace(/\\s+/g, ' ').slice(0, 180),
+      };
+    })()`,
+  )
+  report(
+    'entrenador: rodillas arriba seleccionables y métrica de cadera',
+    highKnee?.pillFound && highKnee?.showsCadera === true && highKnee?.showsHighKnee === true,
+    JSON.stringify(highKnee),
+  )
+
   await evaluate(
     client,
     `(async () => {

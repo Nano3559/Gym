@@ -17,6 +17,19 @@ const STATE_STYLES = {
   DESCENDING: 'border-accent/60 text-accent',
   BOTTOM: 'border-accent text-accent',
   ASCENDING: 'border-volt/60 text-volt',
+  EXTENDED: 'border-volt/60 text-volt',
+  FLEXING: 'border-accent/60 text-accent',
+  FLEXED: 'border-accent text-accent',
+  EXTENDING: 'border-volt/60 text-volt',
+  DOWN: 'border-volt/60 text-volt',
+  RAISING: 'border-accent/60 text-accent',
+  RAISED: 'border-accent text-accent',
+  LOWERING: 'border-volt/60 text-volt',
+  READY: 'border-volt/60 text-volt',
+  JUMPING: 'border-accent/60 text-accent',
+  UP: 'border-accent text-accent',
+  RETURNING: 'border-volt/60 text-volt',
+  LOW: 'border-volt/60 text-volt',
 }
 
 export default function SquatCoachModal({ open, onClose }) {
