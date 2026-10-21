@@ -162,6 +162,8 @@ const IMPLEMENTED_ANALYZERS = {
   high_knees: createHighKneeAnalyzer,
 }
 
+export const POSE_SUPPORTED_EXERCISE_IDS = Object.freeze(Object.keys(IMPLEMENTED_ANALYZERS))
+
 export const EXERCISE_REGISTRY = [
   {
     id: 'pushup',

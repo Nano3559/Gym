@@ -27,6 +27,9 @@ se resuelven en `/mediapipe/wasm` (Vite los expone desde `node_modules` en desar
 los copia a `dist/` en build).
 
 La cámara se libera al cerrar el modal, al desmontar el componente y al ocultar la pestaña.
+El entrenador muestra únicamente los ejercicios conectados a su configuración de pose y
+a un analizador compatible; los demás ejercicios del catálogo no están disponibles para
+conteo por cámara todavía.
 
 ## Comandos
 
@@ -37,3 +40,9 @@ npm run build      # build de producción
 npm run lint       # oxlint
 npm test           # pruebas de la máquina de estados de sentadillas
 ```
+
+## Despliegue en Netlify
+
+La configuración de la raíz del repositorio (`netlify.toml`) ejecuta el build de
+Vite desde `frontend-web` y publica `frontend-web/dist`, con una regla SPA para
+que las rutas de la aplicación carguen correctamente.
