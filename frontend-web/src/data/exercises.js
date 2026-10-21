@@ -1,4 +1,6 @@
-import { EXERCISE_REGISTRY } from '../lib/exerciseRegistry.js'
+import { EXERCISE_REGISTRY, POSE_SUPPORTED_EXERCISE_IDS } from '../lib/exerciseRegistry.js'
+
+const poseSupportedIds = new Set(POSE_SUPPORTED_EXERCISE_IDS)
 
 const METRIC_MAP = {
   squat: { key: 'kneeAngle', label: 'Rodilla' },
@@ -44,8 +46,10 @@ const RULES_MAP = {
   high_knees: 'Cada pierna cuenta una repetición cuando su rodilla llega a la altura de la cadera. La rodilla debe bajar claramente antes de volver a contar.',
 }
 
-export const AVAILABLE_EXERCISES = EXERCISE_REGISTRY.filter((ex) => ex.estado === 'implementado').map((ex) => {
-  const metric = METRIC_MAP[ex.id] || { key: 'angle', label: 'Ángulo' }
+export const AVAILABLE_EXERCISES = EXERCISE_REGISTRY.filter(
+  (ex) => ex.estado === 'implementado' && poseSupportedIds.has(ex.id) && METRIC_MAP[ex.id]
+).map((ex) => {
+  const metric = METRIC_MAP[ex.id]
   return {
     id: ex.id,
     name: ex.nombre,

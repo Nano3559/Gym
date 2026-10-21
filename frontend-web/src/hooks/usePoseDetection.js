@@ -152,7 +152,7 @@ const EXERCISE_SETUP = {
 }
 
 function getSetup(exercise) {
-  return EXERCISE_SETUP[exercise] ?? EXERCISE_SETUP.squat
+  return EXERCISE_SETUP[exercise] ?? null
 }
 
 let visionModulePromise = null
@@ -198,8 +198,14 @@ export default function usePoseDetection({ enabled = true, videoRef, onFrame, ex
 
   useEffect(() => {
     exerciseRef.current = exercise
-    const factory = createAnalyzerForExercise(exercise)
-    analyzerRef.current = factory ? factory() : null
+    const setup = getSetup(exercise)
+    const analyzer = createAnalyzerForExercise(exercise)
+    if (!setup || typeof analyzer?.update !== 'function') {
+      console.error(`El ejercicio "${exercise}" no está integrado con la detección de pose.`)
+      analyzerRef.current = null
+    } else {
+      analyzerRef.current = analyzer
+    }
     smootherRef.current?.reset()
     poseStateRef.current = IDLE_STATE
   }, [exercise])
@@ -207,8 +213,11 @@ export default function usePoseDetection({ enabled = true, videoRef, onFrame, ex
   useEffect(() => {
     onFrameRef.current = onFrame
     if (!analyzerRef.current) {
-      const factory = createAnalyzerForExercise(exerciseRef.current)
-      analyzerRef.current = factory ? factory() : null
+      const setup = getSetup(exerciseRef.current)
+      const analyzer = createAnalyzerForExercise(exerciseRef.current)
+      if (setup && typeof analyzer?.update === 'function') {
+        analyzerRef.current = analyzer
+      }
     }
     if (!smootherRef.current) smootherRef.current = createSmoother(5)
   }, [onFrame])
@@ -268,18 +277,19 @@ export default function usePoseDetection({ enabled = true, videoRef, onFrame, ex
 
       const landmarks = result?.landmarks?.[0]
       const setup = getSetup(exerciseRef.current)
+      if (!setup) return
       const handle = landmarks ? pickSide(landmarks, setup.sides) : null
       const smoother = smootherRef.current
+      const analyzer = analyzerRef.current
 
       landmarksRef.current = landmarks ?? null
 
-      if (!landmarks || !handle?.points || !smoother || !analyzerRef.current) {
+      if (!smoother || typeof analyzer?.update !== 'function') return
+
+      if (!landmarks || !handle?.points) {
         smoother?.reset()
         pushState(
-          {
-            ...analyzerRef.current.update(setup.lostInput(now)),
-            [setup.metricKey]: null,
-          },
+          { ...analyzer.update(setup.lostInput(now)), [setup.metricKey]: null },
           null,
           now,
         )
@@ -289,7 +299,7 @@ export default function usePoseDetection({ enabled = true, videoRef, onFrame, ex
       const { input, state } = setup.measure(handle.points, smoother)
       input.timestamp = now
 
-      pushState({ ...analyzerRef.current.update(input), ...state }, landmarks, now)
+      pushState({ ...analyzer.update(input), ...state }, landmarks, now)
     }
 
     const pushState = (next, landmarks, now) => {

@@ -5,6 +5,22 @@ import { plans as seedPlans } from '../data/gymData'
 const PlansContext = createContext(null)
 const LOCAL_PLANS_KEY = 'gym_admin_plans'
 
+function readLocalPlans() {
+  try {
+    const local = window.localStorage.getItem(LOCAL_PLANS_KEY)
+    if (!local) return []
+
+    const parsed = JSON.parse(local)
+    if (!Array.isArray(parsed) || parsed.some((plan) => !plan || typeof plan !== 'object' || Array.isArray(plan))) {
+      throw new TypeError('El formato guardado no es una lista de planes válida')
+    }
+    return parsed.map(normalize)
+  } catch (error) {
+    console.error('No se pudieron cargar los planes guardados localmente:', error)
+    return []
+  }
+}
+
 // Normaliza un plan de cualquier fuente a la forma canónica de la UI.
 function normalize(p) {
   return {
@@ -29,9 +45,7 @@ function normalize(p) {
 
 export function PlansProvider({ children }) {
   const [plans, setPlans] = useState(() => {
-    const local = window.localStorage.getItem(LOCAL_PLANS_KEY)
-    if (!local) return seedPlans.map(normalize)
-    const overrides = JSON.parse(local).map(normalize)
+    const overrides = readLocalPlans()
     const byId = new Map(overrides.map((plan) => [plan.id, plan]))
     const merged = seedPlans.map(normalize).map((plan) => byId.get(plan.id) || plan)
     return [...merged, ...overrides.filter((plan) => !seedPlans.some((seed) => normalize(seed).id === plan.id))]
