@@ -1,0 +1,212 @@
+{
+  "version": "dietfits-comparison-v2",
+  "source_sha256": "f1b8303b26c2ebfae47587997d493e4a1365289af64c871fa6ff435b86d42669",
+  "horizon_months": 3,
+  "origin_month": 0,
+  "prior_test_already_observed": true,
+  "independent_test": false,
+  "evidence_type": "exploratory_reused_test",
+  "features": [
+    "weight_start_kg",
+    "intake_start_kcal_day",
+    "expenditure_start_kcal_day"
+  ],
+  "split_counts": {
+    "train": {
+      "pairs": 314,
+      "participants": 314
+    },
+    "validation": {
+      "pairs": 86,
+      "participants": 86
+    },
+    "calibration": {
+      "pairs": 55,
+      "participants": 55
+    },
+    "test": {
+      "pairs": 78,
+      "participants": 78
+    }
+  },
+  "pair_counts": {
+    "0": {
+      "pairs": 533,
+      "participants": 533,
+      "complete_origin_features": 483
+    },
+    "3": {
+      "pairs": 462,
+      "participants": 462,
+      "complete_origin_features": 417
+    }
+  },
+  "split_hashes": {
+    "train": "7843b61e283be7e6023642727b958e6c327f1817841fe6e7c1f1cc4ec222c919",
+    "validation": "0fd147be560600cf55242fde1af5e87bc982b6c363f6cb37e052a43e8f708a71",
+    "calibration": "6e59de3f92ec153bb71bd9c0c7b63ac14dd6da824af2575f9ce96c2b02061487",
+    "test": "a1fe8df01861d4d91b6d6906ce07c3ded4b13c67384b3b1d0bf704222bec63f9"
+  },
+  "selection": {
+    "selection": "validation_only",
+    "boosting_tested": true,
+    "candidates": [
+      {
+        "name": "ridge-alpha-0.1",
+        "family": "ridge",
+        "validation_mae_kg": 3.574671695635148
+      },
+      {
+        "name": "ridge-alpha-1",
+        "family": "ridge",
+        "validation_mae_kg": 3.5745457393232143
+      },
+      {
+        "name": "ridge-alpha-10",
+        "family": "ridge",
+        "validation_mae_kg": 3.5749864631798176
+      },
+      {
+        "name": "ridge-alpha-100",
+        "family": "ridge",
+        "validation_mae_kg": 3.5942472737605047
+      },
+      {
+        "name": "ridge-alpha-1000",
+        "family": "ridge",
+        "validation_mae_kg": 3.7067293488102635
+      },
+      {
+        "name": "boost-leaves-3",
+        "family": "boosting",
+        "validation_mae_kg": 3.622165645021869
+      },
+      {
+        "name": "boost-leaves-7",
+        "family": "boosting",
+        "validation_mae_kg": 3.7861227454425816
+      }
+    ]
+  },
+  "selected_model": "ridge-alpha-1",
+  "family_diagnostics": {
+    "ridge": {
+      "model": "ridge-alpha-1",
+      "test": {
+        "count": 78,
+        "mae_kg": 3.1521387462068025,
+        "bias_kg": 0.018398235106983244,
+        "rmse_kg": 3.952715516414182,
+        "coverage": null,
+        "mean_width_kg": null
+      }
+    },
+    "boosting": {
+      "model": "boost-leaves-3",
+      "test": {
+        "count": 78,
+        "mae_kg": 3.2339279078251404,
+        "bias_kg": -0.12505560498070642,
+        "rmse_kg": 4.01637034502313,
+        "coverage": null,
+        "mean_width_kg": null
+      }
+    }
+  },
+  "family_diagnostics_used_for_selection": false,
+  "calibration": {
+    "participants": 55,
+    "nominal_coverage": 0.9,
+    "radius_kg": 7.179230137402875
+  },
+  "test": {
+    "constant_weight": {
+      "count": 78,
+      "mae_kg": 6.0654191658974375,
+      "bias_kg": 5.834669246923078,
+      "rmse_kg": 7.030707590062719,
+      "coverage": null,
+      "mean_width_kg": null
+    },
+    "train_mean_change": {
+      "count": 78,
+      "mae_kg": 3.1603121480091465,
+      "bias_kg": 0.035325404375307394,
+      "rmse_kg": 3.922847419945097,
+      "coverage": null,
+      "mean_width_kg": null
+    },
+    "candidate": {
+      "count": 78,
+      "mae_kg": 3.1521387462068025,
+      "bias_kg": 0.018398235106983244,
+      "rmse_kg": 3.952715516414182,
+      "coverage": 0.9230769230769231,
+      "mean_width_kg": 14.35846027480575
+    }
+  },
+  "paired_improvements": {
+    "constant_weight": {
+      "mean_mae_improvement_kg": 2.913280419690635,
+      "bootstrap_95_percentile_kg": [
+        1.9869238188058562,
+        3.775602889553364
+      ],
+      "participants": 78
+    },
+    "train_mean_change": {
+      "mean_mae_improvement_kg": 0.008173401802344835,
+      "bootstrap_95_percentile_kg": [
+        -0.2508773920117311,
+        0.2542921132439522
+      ],
+      "participants": 78
+    }
+  },
+  "temporal_diagnostic": {
+    "origin_month": 3,
+    "horizon_months": 3,
+    "participants": 70,
+    "independent_cohort": false,
+    "selected_again": false,
+    "candidate": {
+      "count": 70,
+      "mae_kg": 4.818996600109274,
+      "bias_kg": -4.49604446312913,
+      "rmse_kg": 5.565202921964057,
+      "coverage": 0.8142857142857143,
+      "mean_width_kg": 14.35846027480575
+    },
+    "constant_weight": {
+      "count": 70,
+      "mae_kg": 2.3757256022857143,
+      "bias_kg": 0.6899392925714279,
+      "rmse_kg": 3.133968936572481,
+      "coverage": null,
+      "mean_width_kg": null
+    }
+  },
+  "meets_numeric_gate": false,
+  "research_candidate_qualifies": false,
+  "integrate_in_app": false,
+  "decision": "retain_existing_method_requires_independent_validation",
+  "ridge_export_javascript_parity": {
+    "status": "passed",
+    "max_absolute_error": 1.7763568394002505e-15
+  },
+  "sprint6_comparison": "not_comparable_different_horizon_and_sampling",
+  "six_month_model": "not_trained",
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "scipy": "1.16.2",
+    "scikit-learn": "1.7.2",
+    "joblib": "1.5.2",
+    "threadpoolctl": "3.6.0"
+  },
+  "evaluator_sha256": "e8f55e5d4472413f053e54e458f2f064f160807f886b61524564867bfeb8ad82",
+  "core_evaluator_sha256": "b47b0de6c6d23bb70fa2acade1bcedf63a81e4c1b100d2c91ae7c0665e7406d9",
+  "protocol_sha256": "fbe892da9baed8762e382d42692b8f57dd059b13543c8e93320719db7c566d7f",
+  "review_sha256": "8c82e764943f150d088e0f03fd0e617391618202475c50c7fc0a34aff2c235a5"
+}

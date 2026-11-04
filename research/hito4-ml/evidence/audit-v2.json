@@ -1,0 +1,63 @@
+{
+  "rows": 2436,
+  "participants": 609,
+  "duplicate_key_rows": 0,
+  "exact_duplicate_rows": 0,
+  "missing_ids": 0,
+  "unknown_time_values": [],
+  "columns": {
+    "weight_gcrc": {
+      "missing": 391,
+      "invalid_numeric": 0,
+      "outside_review_range": 0,
+      "review_range": [
+        20,
+        500
+      ],
+      "min": 55.8,
+      "max": 150.1983248
+    },
+    "cal": {
+      "missing": 339,
+      "invalid_numeric": 0,
+      "outside_review_range": 0,
+      "review_range": [
+        0,
+        15000
+      ],
+      "min": 492.32,
+      "max": 4641.88266666667
+    },
+    "par_kcal_kg_day": {
+      "missing": 598,
+      "invalid_numeric": 0,
+      "outside_review_range": 0,
+      "review_range": [
+        10,
+        100
+      ],
+      "min": 25.5,
+      "max": 60.0
+    }
+  },
+  "visits": {
+    "0": {
+      "rows": 609,
+      "complete_three_fields": 554
+    },
+    "3": {
+      "rows": 609,
+      "complete_three_fields": 473
+    },
+    "6": {
+      "rows": 609,
+      "complete_three_fields": 366
+    },
+    "12": {
+      "rows": 609,
+      "complete_three_fields": 376
+    }
+  },
+  "usable_structure": true,
+  "source_sha256": "f1b8303b26c2ebfae47587997d493e4a1365289af64c871fa6ff435b86d42669"
+}

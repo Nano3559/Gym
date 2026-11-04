@@ -1,0 +1,10 @@
+{
+  "tests": 8,
+  "passed": 8,
+  "failed": 0,
+  "skipped": 0,
+  "regression_tests": 27,
+  "regression_passed": 27,
+  "application_changed": false,
+  "production_validation": false
+}

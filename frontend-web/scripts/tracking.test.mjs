@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict'
+import { mealPayload, mealTotals, dayRange, createSessionClock } from '../src/lib/trackingData.js'
+import { initialState, routineReducer } from '../src/lib/routineState.js'
+const meal = { alimento:'Arroz',portion:'100 g',portions:'2.5',calorias:'120',proteinas_g:'3',carbohidratos_g:'25',grasas_g:'1' }
+const saved = mealPayload(meal)
+assert.equal(saved.calorias,300)
+assert.equal(saved.proteinas_g,7.5)
+assert.equal(saved.nutrition_per_portion.calorias,120)
+assert.equal(mealPayload({...meal,...saved.nutrition_per_portion}).calorias,300,'Editar sin cambios no multiplica porciones dos veces')
+for (const patch of [{portions:0},{portions:0.001},{portions:1.234},{portions:101},{calorias:''},{grasas_g:-1},{proteinas_g:NaN},{alimento:' '},{portion:''}]) assert.throws(()=>mealPayload({...meal,...patch}))
+assert.equal(mealPayload({...meal,portions:0.01}).portions,0.01)
+assert.equal(mealPayload({...meal,portions:100}).portions,100)
+assert.equal(mealPayload({...meal,calorias:0}).calorias,0,'Cero explícito es válido')
+assert.equal(mealTotals([{...saved,confirmation:'confirmed'}, {...saved,confirmation:'legacy'}, {...saved,confirmation:'void'}]).calorias,300)
+assert.equal(mealTotals([{...saved,confirmation:'confirmed',es_comida:false}]).calorias,0)
+assert.equal(mealTotals([]).calorias,0)
+const range = dayRange('2026-10-21','America/La_Paz')
+assert.deepEqual(range,['2026-10-21T04:00:00.000Z','2026-10-22T04:00:00.000Z'])
+for (const [day,hours] of [['2026-03-08',23],['2026-11-01',25]]) { const [start,end]=dayRange(day,'America/New_York'); assert.equal((Date.parse(end)-Date.parse(start))/3600000,hours) }
+assert.equal(dayRange('2026-03-08','America/Havana')[0],'2026-03-08T05:00:00.000Z','Admite cambio horario a medianoche')
+assert.throws(()=>dayRange('2011-12-30','Pacific/Apia'),/no existió/)
+assert.throws(()=>dayRange('2026-02-30','UTC'),/no válido/)
+let now=0; const clock=createSessionClock(()=>now)
+now=3000;clock.transition('active');now=13000;clock.transition('paused');now=23000;clock.transition('rest');now=28000;clock.transition('active');now=38000;clock.transition(null)
+assert.deepEqual(clock.snapshot(),{active:20,rest:5,preparation:3,paused:10})
+now=999000;assert.equal(clock.snapshot().active,20,'El reloj detenido no añade tiempo')
+let state=routineReducer(initialState,{type:'START_ROUTINE',routine:[{exerciseId:'curl_biceps',sets:1,targetReps:10}],metadata:{}})
+for(let i=0;i<3;i++)state=routineReducer(state,{type:'TICK_PREPARING'})
+state=routineReducer(state,{type:'EXERCISE_COMPLETE',reps:10,durationSec:30,loadKg:12.5})
+assert.equal(state.completedExercises[0].loadKg,12.5)
+assert.equal(state.completedExercises[0].durationSec,30)
+assert.equal(state.status,'COMPLETED')
+console.log('OK: porciones y edición, exclusión de registros no confirmados, días de 23/25 h, tiempo activo/pausa/descanso separados.')

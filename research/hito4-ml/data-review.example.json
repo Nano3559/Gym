@@ -1,0 +1,11 @@
+{
+  "source_sha256": "REPLACE_WITH_ORIGINAL_CSV_SHA256",
+  "research_use_documented": false,
+  "dictionary_and_units_verified": false,
+  "scheduled_visits_verified": false,
+  "permission_evidence": "",
+  "reviewed_by": "",
+  "reviewed_at": "",
+  "commercial_use_resolved": false,
+  "notes": "Ejemplo sin autorización resuelta. No cambiar campos a true sin documentar evidencia aplicable al archivo exacto. No se solicita usar datos de usuarios de la aplicación."
+}

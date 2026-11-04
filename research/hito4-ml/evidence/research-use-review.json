@@ -1,0 +1,21 @@
+{
+  "source_sha256": "f1b8303b26c2ebfae47587997d493e4a1365289af64c871fa6ff435b86d42669",
+  "research_use_documented": true,
+  "dictionary_and_units_verified": true,
+  "scheduled_visits_verified": true,
+  "permission_evidence": "Limited local exploratory research on public deidentified measurements, supported by the investigators data-sharing statement at https://onlinelibrary.wiley.com/doi/10.1002/oby.22389 (Acknowledgments: any purpose by anyone), the public author-controlled OSF file https://osf.io/ztysq/, and the user request to perform the evaluation. This is a scoped research-use interpretation, not a finding that the full file has a formal license. OSF currently states No License. Scope of a blanket license for all 609 participants, commercial use, redistribution and production deployment is not resolved or claimed. Raw records and trained coefficients are not redistributed in the delivery.",
+  "reviewed_by": "Codex: documented source and scope review for this local research run",
+  "reviewed_at": "2026-10-22",
+  "commercial_use_resolved": false,
+  "redistribution_authorized": false,
+  "production_deployment_authorized": false,
+  "codebook_url": "https://osf.io/kyiuj/files/mfsg4",
+  "codebook_sha256": "260080837158637c3bbef9ad5be1adc3749cd2b9577aefda0bb893e1cd6b48ce",
+  "unit_evidence": {
+    "weight_gcrc": "Codebook specifies kg",
+    "cal": "Codebook specifies kcal consumed (NDSR); original trial describes 24h dietary recalls",
+    "par_kcal_kg_day": "Codebook explicitly specifies energy expenditure kcal/kg/d; original trial identifies total expenditure questionnaire",
+    "time": "Codebook explicitly maps a.BL, b.3, c.6, d.12 to scheduled 0,3,6,12 month visits"
+  },
+  "scope": "offline_noncommercial_exploratory_evaluation_only"
+}

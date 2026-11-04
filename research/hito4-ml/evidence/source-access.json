@@ -1,0 +1,12 @@
+[
+  {
+    "source": "https://api.osf.io/v2/nodes/kyiuj/",
+    "checked_at": "2026-10-22T05:27:23.334643+00:00",
+    "error": "<urlopen error [Errno 11001] getaddrinfo failed>"
+  },
+  {
+    "source": "https://osf.io/ztysq/download",
+    "checked_at": "2026-10-22T05:27:23.436562+00:00",
+    "error": "<urlopen error [Errno 11001] getaddrinfo failed>"
+  }
+]

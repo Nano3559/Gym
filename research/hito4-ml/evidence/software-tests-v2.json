@@ -1,0 +1,10 @@
+{
+  "tests": 44,
+  "passed": 44,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "uses_synthetic_fixtures_only": true,
+  "real_data_benchmark_executed_by_tests": false,
+  "successful": true
+}

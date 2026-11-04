@@ -1,0 +1,43 @@
+{
+  "installed_on": "2026-10-22",
+  "environment": ".venv",
+  "base_packages_reused": [
+    "numpy",
+    "pandas"
+  ],
+  "versions": {
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "scipy": "1.16.2",
+    "scikit-learn": "1.7.2",
+    "joblib": "1.5.2",
+    "threadpoolctl": "3.6.0"
+  },
+  "wheels": [
+    {
+      "filename": "joblib-1.5.2-py3-none-any.whl",
+      "sha256": "4e1f0bdbb987e6d843c70cf43714cb276623def372df3c22fe5266b2670bc241",
+      "bytes": 308396,
+      "source": "Official PyPI project release files, downloaded through browser"
+    },
+    {
+      "filename": "scikit_learn-1.7.2-cp312-cp312-win_amd64.whl",
+      "sha256": "6088aa475f0785e01bcf8529f55280a3d7d298679f50c0bb70a2364a82d0b290",
+      "bytes": 8731256,
+      "source": "Official PyPI project release files, downloaded through browser"
+    },
+    {
+      "filename": "scipy-1.16.2-cp312-cp312-win_amd64.whl",
+      "sha256": "0ce54e07bbb394b417457409a64fd015be623f36e330ac49306433ffe04bc97e",
+      "bytes": 38550641,
+      "source": "Official PyPI project release files, downloaded through browser"
+    },
+    {
+      "filename": "threadpoolctl-3.6.0-py3-none-any.whl",
+      "sha256": "43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb",
+      "bytes": 18638,
+      "source": "Official PyPI project release files, downloaded through browser"
+    }
+  ],
+  "installation": "pip --python .venv/Scripts/python.exe install --no-index --no-deps --find-links .wheelhouse (pinned versions)"
+}

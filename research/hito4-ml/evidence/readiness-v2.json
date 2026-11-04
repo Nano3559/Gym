@@ -1,0 +1,20 @@
+{
+  "status": "evaluated_exploratory_retain_existing_method",
+  "original_dataset_audited": true,
+  "training_executed": true,
+  "real_data_benchmark_executed": true,
+  "software_tests_passed": 44,
+  "software_tests_skipped": 0,
+  "selected_model": "ridge-alpha-1",
+  "meets_numeric_gate": false,
+  "independent_test": false,
+  "integrate_in_app": false,
+  "application_method_retained": "observed-weekly-v2",
+  "remaining_conditions": [
+    "No numerical improvement sufficient for adoption",
+    "Prior test already observed",
+    "No application-user validation at seven days",
+    "Production and redistribution use conditions unresolved",
+    "Previous Supabase migrations and remote acceptance pending"
+  ]
+}

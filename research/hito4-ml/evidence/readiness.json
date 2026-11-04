@@ -1,0 +1,25 @@
+{
+  "version": "dietfits-three-months-research-v1",
+  "status": "evaluated_retain_existing_method",
+  "original_file_downloaded_and_audited": true,
+  "training_executed": true,
+  "real_benchmark_executed": true,
+  "software_tests_passed": 27,
+  "software_tests_skipped": 0,
+  "integrate_in_app": false,
+  "research_candidate_qualifies": false,
+  "blocking_conditions_for_evaluation": [],
+  "remaining_conditions_for_deployment": [
+    "El candidato no supera el criterio frente a las referencias.",
+    "Validación externa en usuarios y horizonte de siete días ausente.",
+    "Uso comercial y licencia formal amplia sin resolver.",
+    "Aplicación/migraciones y aceptación real de sprints anteriores pendientes."
+  ],
+  "dependencies_available": {
+    "numpy": true,
+    "pandas": true,
+    "sklearn": true
+  },
+  "evidence": "benchmark.json; software-tests.json; installation.json; research-use-review.json",
+  "source_file_available": true
+}

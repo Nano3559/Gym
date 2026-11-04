@@ -1,0 +1,63 @@
+{
+  "checked_on": "2026-10-22",
+  "original_csv_downloaded": true,
+  "current_file_sha256": "f1b8303b26c2ebfae47587997d493e4a1365289af64c871fa6ff435b86d42669",
+  "current_file_rows": 2436,
+  "current_participant_count": 609,
+  "osf_metadata_reverified": true,
+  "previous_note_only": {
+    "project": "https://osf.io/kyiuj/",
+    "file": "https://osf.io/ztysq/download",
+    "reported_license": "No License",
+    "reported_participants": 609,
+    "reported_rows": 2436,
+    "recalculated_this_sprint": false
+  },
+  "sources": [
+    {
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2673150",
+      "role": "original_trial",
+      "verified": "Visitas de inicio, 3, 6 y 12 meses; gasto total mediante cuestionario y alimentación por entrevistas; no registros diarios."
+    },
+    {
+      "url": "https://onlinelibrary.wiley.com/doi/10.1002/oby.22389",
+      "role": "author_data_availability_statement",
+      "verified": "Declara disponibilidad de los datos anonimizados descritos para cualquier persona y propósito. La población analizada es un subconjunto; no se confirmó que la declaración autorice el archivo completo ni su uso comercial."
+    },
+    {
+      "url": "https://github.com/AdrianSotoM/DIETFITS_reanalysis/blob/main/paper_code.R",
+      "role": "published_reanalysis_author_code",
+      "verified": "Referencia la descarga OSF y los códigos a.BL, b.3, c.6 y d.12. No se ejecutó ni copió su análisis."
+    },
+    {
+      "url": "https://scikit-learn.org/stable/common_pitfalls.html#data-leakage",
+      "role": "pipeline_method",
+      "verified": "Separar particiones antes de ajustar transformaciones y evitar aprender de los datos de test."
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+      "role": "group_separation",
+      "verified": "Justifica separación de observaciones de una misma persona. Aquí se usa una asignación por hash, no GroupKFold."
+    },
+    {
+      "url": "https://arxiv.org/abs/2107.07511",
+      "role": "conformal_method",
+      "verified": "Calibración independiente y cuantíl corregido; la cobertura en otra población no se presupone."
+    }
+  ],
+  "decision": {
+    "research_use_scope": "documented limited offline exploratory research interpretation; see research-use-review.json",
+    "commercial_use": "unresolved",
+    "blanket_formal_license": "not_established",
+    "redistribute_raw_or_coefficients": false,
+    "train_on_real_data": true,
+    "integrate_in_app": false
+  },
+  "pending_dictionary": {},
+  "current_osf_license": "No License (observed in OSF metadata UI 2026-10-22)",
+  "codebook": {
+    "url": "https://osf.io/kyiuj/files/mfsg4",
+    "sha256": "260080837158637c3bbef9ad5be1adc3749cd2b9577aefda0bb893e1cd6b48ce",
+    "units_and_time_map_verified": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "frontend-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "test": "node scripts/squat-analyzer.test.mjs && node scripts/pushup-analyzer.test.mjs && node scripts/curl-analyzer.test.mjs && node scripts/lateral-raise-analyzer.test.mjs && node scripts/lunge-analyzer.test.mjs && node scripts/calf-raise-analyzer.test.mjs && node scripts/jack-analyzer.test.mjs && node scripts/high-knee-analyzer.test.mjs && node scripts/fps-monitor.test.mjs && node scripts/device-profiles.test.mjs && node scripts/mobile-layout.test.mjs && node scripts/training-integration.test.mjs && node scripts/camera-lifecycle.test.mjs",
+    "test:fps": "node scripts/fps-monitor.test.mjs",
+    "test:devices": "node scripts/device-profiles.test.mjs",
+    "test:layout": "node scripts/mobile-layout.test.mjs",
+    "test:mobile": "node scripts/mobile-viewport-smoke.mjs",
+    "test:jack": "node scripts/jack-analyzer.test.mjs",
+    "test:highKnee": "node scripts/high-knee-analyzer.test.mjs",
+    "test:lunge": "node scripts/lunge-analyzer.test.mjs",
+    "test:calfRaise": "node scripts/calf-raise-analyzer.test.mjs",
+    "test:pushup": "node scripts/pushup-analyzer.test.mjs",
+    "test:curl": "node scripts/curl-analyzer.test.mjs",
+    "test:lateralRaise": "node scripts/lateral-raise-analyzer.test.mjs",
+    "test:camera": "node scripts/camera-smoke.mjs",
+    "test:food": "node scripts/food-analysis-smoke.mjs",
+    "preview": "vite preview",
+    "test:training": "node scripts/training-integration.test.mjs && node scripts/training-render.test.mjs",
+    "test:camera:unit": "node scripts/camera-lifecycle.test.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "@supabase/supabase-js": "^2.112.3",
+    "lucide-react": "^1.32.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "autoprefixer": "^10.5.4",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0"
+  }
+}

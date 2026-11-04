@@ -1,0 +1,22 @@
+{
+  "source_sha256": "f1b8303b26c2ebfae47587997d493e4a1365289af64c871fa6ff435b86d42669",
+  "codebook_sha256": "260080837158637c3bbef9ad5be1adc3749cd2b9577aefda0bb893e1cd6b48ce",
+  "original_research_review_sha256": "8c82e764943f150d088e0f03fd0e617391618202475c50c7fc0a34aff2c235a5",
+  "source_reused_from_previous_local_download": true,
+  "original_review_date": "2026-10-22",
+  "scope": "local_noncommercial_exploratory_only_no_redistribution_or_production_authorization_claimed",
+  "same_prior_test_partition_verified": true,
+  "legacy_evaluator_preserved": true,
+  "evaluator_sha256": "e8f55e5d4472413f053e54e458f2f064f160807f886b61524564867bfeb8ad82",
+  "protocol_sha256": "fbe892da9baed8762e382d42692b8f57dd059b13543c8e93320719db7c566d7f",
+  "ridge_inference_script_sha256": "d0ec20822a9379a7c8a5a43618d0e02b1ef07a4af87ff18491515faaee46e4f9",
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "scipy": "1.16.2",
+    "scikit-learn": "1.7.2",
+    "joblib": "1.5.2",
+    "threadpoolctl": "3.6.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "policy_version": "model-governance-v1",
+  "eligible": false,
+  "reasons": [
+    "research_candidate_qualifies",
+    "production_use_authorized",
+    "app_temporal_validation",
+    "participant_disjoint",
+    "train_only_transforms",
+    "no_future_features",
+    "consent_enforced",
+    "inference_parity",
+    "rollback_verified",
+    "artifact_sha256",
+    "data_snapshot_sha256",
+    "evaluated_at",
+    "horizon",
+    "train_people",
+    "validation_people",
+    "calibration_people",
+    "test_people",
+    "metrics_missing_or_invalid"
+  ],
+  "fallback_version": "observed-weekly-v1",
+  "activates_app": false
+}

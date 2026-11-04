@@ -1,0 +1,15 @@
+{
+  "horizon_months": 3,
+  "pairs_by_origin_month": {
+    "0": {
+      "pairs": 533,
+      "participants": 533,
+      "complete_origin_features": 483
+    },
+    "3": {
+      "pairs": 462,
+      "participants": 462,
+      "complete_origin_features": 417
+    }
+  }
+}

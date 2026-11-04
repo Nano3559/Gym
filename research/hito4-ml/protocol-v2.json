@@ -1,0 +1,27 @@
+{
+  "version": "dietfits-comparison-v2",
+  "status": "frozen_for_exploratory_execution",
+  "seed": 407,
+  "target": "weight_change_kg",
+  "horizon": "scheduled_three_month_visit",
+  "features": ["weight_start_kg", "intake_start_kcal_day", "expenditure_start_kcal_day"],
+  "split_unit": "participant",
+  "split_proportions": [0.60, 0.15, 0.10, 0.15],
+  "ridge_alpha": [0.1, 1, 10, 100, 1000],
+  "boosting": {
+    "estimator": "HistGradientBoostingRegressor",
+    "always_compare": true,
+    "max_leaf_nodes": [3, 7],
+    "max_iter": 100,
+    "learning_rate": 0.05,
+    "min_samples_leaf": 20,
+    "early_stopping": false
+  },
+  "selection": "validation_mae_only",
+  "calibration": "split_conformal_90_percent",
+  "minimum_improvement_kg": 0.2,
+  "minimum_relative_improvement": 0.05,
+  "prior_test_already_observed": true,
+  "prior_test_must_not_be_claimed_as_new_independent_evidence": true,
+  "production_enabled": false
+}

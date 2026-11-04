@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict'
+import { makeProjection,shiftDay,evaluateProjections,summarizeEvaluation,backtestProjection,validateProjectionSnapshot } from '../src/lib/projectionData.js'
+const asOf='2020-03-24',start=shiftDay(asOf,-83),now=Date.parse('2020-03-25T12:00Z'),timezone='UTC'
+const weights=Array.from({length:84},(_,i)=>({id:String(i),measured_at:`${shiftDay(start,i)}T12:00Z`,weight_kg:85-i*0.04}))
+const balance={rows:weights.map(w=>({day:w.measured_at.slice(0,10),eligible:true,balance:-400}))}
+const run=extra=>makeProjection({weights,balance,asOf,timezone,now,...extra})
+let s=run()
+assert.equal(s.ready,true);assert.equal(s.horizon,7);assert.equal(s.targetDay,'2020-03-31');assert.equal(s.rawSlope,-0.04);assert.equal(s.correction,0)
+assert.ok(Math.abs(s.projected-(s.anchor-0.28))<0.0001)
+assert.ok(s.scenarios.low<=s.projected&&s.scenarios.high>=s.projected)
+assert.equal(run({goal:{target_weight_kg:s.anchor-0.4}}).goalEstimate.latest,shiftDay(asOf,10))
+assert.equal(run({goal:{target_weight_kg:60}}).goalEstimate,null,'No extrapolar una meta distante')
+assert.equal(run({weights:[]}).ready,false)
+assert.equal(run({weights:weights.map((w,i)=>({...w,weight_kg:100-i*0.2}))}).ready,false,'No extrapolar ritmos fuera del límite de esta versión')
+assert.equal(run({asOf:shiftDay(asOf,-1)}).ready,false,'No emitir como si un corte antiguo fuera actual')
+const partial={rows:balance.rows.map((r,i)=>i===80?{...r,eligible:false}:r)}
+assert.equal(run({balance:partial}).ready,false)
+assert.equal(run({weights:weights.filter((_,i)=>i<81)}).ready,false,'Pesaje reciente obligatorio')
+const spike=weights.map((w,i)=>({...w,weight_kg:w.weight_kg+(i===82?8:0)}))
+assert.equal(run({weights:spike}).rawSlope,s.rawSlope,'Una subida aislada no cambia el ritmo de referencia')
+assert.ok(Math.abs(run({weights:spike}).projected-s.projected)<0.05,'El suavizado limita el efecto sobre el nivel de referencia')
+assert.equal(run({weights:spike}).correction,0,'Una subida aislada no activa una corrección energética')
+const future=[...weights,{id:'future',measured_at:'2020-03-26T12:00Z',weight_kg:40}]
+assert.equal(run({weights:future}).projected,s.projected,'No usar pesajes futuros')
+const prior={id:'previous',as_of:shiftDay(asOf,-7),timezone,snapshot:{...s,slope:-0.08,correction:0}}
+assert.equal(run({previous:prior}).slope,-0.07,'Paso máximo de ritmo: 0,01 kg/día')
+const waiting={...prior,as_of:shiftDay(asOf,-6)}
+assert.equal(run({previous:waiting}).slope,-0.08)
+const flat=weights.map(w=>({...w,weight_kg:80}))
+assert.equal(run({weights:flat}).correction,0,'Primera emisión sin corrección energética')
+let previous={id:'p',as_of:shiftDay(asOf,-7),timezone,snapshot:{version:s.version,slope:0,correction:0}}
+const adjusted=run({weights:flat,previous})
+assert.equal(adjusted.correction,25);assert.equal(adjusted.effectiveBalance,-375);assert.equal(adjusted.projected,80,'La corrección energética no fuerza el peso previsto')
+const params=adjusted.inputs.previousParameters
+const replay=makeProjection({weights:adjusted.inputs.weights,balance:{rows:adjusted.inputs.balance},asOf:adjusted.asOf,timezone:adjusted.timezone,goal:adjusted.inputs.goal,previous:{id:params.id,as_of:params.asOf,timezone:params.timezone,snapshot:params},now:Date.parse(adjusted.inputs.calculatedAt)})
+assert.deepEqual(replay,adjusted,'La instantánea conserva todas las entradas para reproducir la emisión')
+previous={...previous,snapshot:{...previous.snapshot,correction:200}}
+assert.equal(run({weights:flat,previous}).correction,200,'Límite absoluto de corrección')
+const reversed={rows:balance.rows.map(r=>({...r,balance:400}))}
+assert.equal(run({weights:flat,previous,balance:reversed}).appliedCorrection,0,'Un parámetro antiguo no amplifica un balance del signo contrario')
+const smallDeficit={rows:balance.rows.map(r=>({...r,balance:-20}))}
+assert.equal(run({weights:flat,previous,balance:smallDeficit}).effectiveBalance,0,'La corrección no cruza cero')
+assert.equal(run({weights:flat,previous:{...previous,as_of:shiftDay(asOf,-1)}}).correction,200,'No acumular pasos en revisiones diarias')
+assert.equal(run({previous:{...prior,timezone:'America/La_Paz'}}).ready,false)
+assert.equal(run({previous:{...prior,snapshot:{...prior.snapshot,slope:NaN}}}).ready,false)
+const saved={id:'saved',as_of:asOf,timezone,snapshot:s,created_at:new Date(now).toISOString()}
+const oldMethod=evaluateProjections([{...saved,snapshot:{...s,version:'observed-weekly-v1'}}],weights,timezone,s.targetDay)
+assert.equal(summarizeEvaluation(oldMethod).count,0,'No mezclar métricas entre versiones')
+assert.equal(evaluateProjections([{...saved,created_at:null}],weights,timezone,s.targetDay)[0].status,'Emisión sin fecha verificable')
+assert.deepEqual(validateProjectionSnapshot(JSON.parse(JSON.stringify(s))),s)
+assert.throws(()=>validateProjectionSnapshot({...s,projected:1}),/no coincide/)
+assert.equal(run({restartOn:shiftDay(asOf,-26)}).ready,false,'Reinicio exige 28 días completos nuevos')
+assert.equal(run({restartOn:shiftDay(asOf,-27)}).ready,true)
+assert.equal(run({restartOn:'invalid'}).ready,false)
+const restarted=run({restartOn:shiftDay(asOf,-27),previous:{...prior,as_of:shiftDay(asOf,-30)}})
+assert.equal(restarted.previousId,null);assert.equal(restarted.correction,0)
+assert.deepEqual(validateProjectionSnapshot(restarted),restarted)
+const interrupted=run({previous:{...prior,as_of:shiftDay(asOf,-29),snapshot:{...prior.snapshot,correction:150}}})
+assert.equal(interrupted.correction,0);assert.equal(interrupted.chainReset,true);assert.equal(interrupted.slope,s.rawSlope)
+assert.deepEqual(validateProjectionSnapshot(interrupted),interrupted)
+const upgraded=run({previous:{...prior,snapshot:{...prior.snapshot,version:'observed-weekly-v1',correction:100}}})
+assert.equal(upgraded.chainReset,true);assert.equal(upgraded.correction,0)
+assert.deepEqual(validateProjectionSnapshot(upgraded),upgraded)
+const repeatedBalance=run({balance:{rows:[...balance.rows,{...balance.rows.at(-1)}]}})
+assert.equal(repeatedBalance.meanBalance,-400);assert.equal(repeatedBalance.inputs.balance.length,28)
+const latest=weights.at(-1).weight_kg
+assert.equal(run({goal:{target_weight_kg:latest+0.01}}).goalEstimate,null,'No fecha si el último día observado ya alcanzó la meta')
+const later=Array.from({length:7},(_,i)=>({id:`later${i}`,measured_at:`${shiftDay(asOf,i+1)}T12:00Z`,weight_kg:s.projected}))
+assert.equal(evaluateProjections([saved],later,timezone,asOf)[0].status,'Pendiente de pesajes posteriores')
+assert.equal(evaluateProjections([saved],later.slice(0,2),timezone,s.targetDay)[0].status,'Datos posteriores insuficientes')
+let evaluated=evaluateProjections([saved],later,timezone,s.targetDay)
+assert.equal(evaluated[0].error,0);assert.ok(evaluated[0].constantError>0)
+assert.equal(summarizeEvaluation(evaluated).anchorComparisonCount,1)
+assert.ok(Number.isFinite(summarizeEvaluation(evaluated).latestAnchorMae))
+const repeatedLater=[...later,{...later[1]}]
+assert.equal(evaluateProjections([saved],repeatedLater,timezone,s.targetDay)[0].actual,evaluated[0].actual)
+const conflictingLater=[...later,{...later[1],weight_kg:100}]
+assert.equal(evaluateProjections([saved],conflictingLater,timezone,s.targetDay)[0].status,'Pesajes posteriores contradictorios')
+assert.throws(()=>validateProjectionSnapshot({...s,inputs:{...s.inputs,calculatedAt:'2099-01-01'}}),/fecha de cálculo/)
+assert.equal(evaluateProjections([{...saved,created_at:`${shiftDay(asOf,6)}T23:00Z`}],later,timezone,s.targetDay)[0].status,'Datos posteriores insuficientes','No evaluar contra pesajes anteriores a la hora real de emisión')
+assert.equal(summarizeEvaluation(evaluated).count,1);assert.equal(summarizeEvaluation([]).mae,null)
+const backtest=backtestProjection(weights,balance,asOf,timezone)
+assert.ok(backtest.summary.count>=4);assert.ok(backtest.summary.mae<0.001)
+assert.equal(backtestProjection(weights,balance,asOf,timezone,asOf).summary.count,0,'El backtest no reutiliza periodos anteriores al reinicio')
+const altered=weights.map((w,i)=>i>76?{...w,weight_kg:95}:w)
+assert.equal(backtestProjection(altered,balance,asOf,timezone).rows[0].forecast,backtest.rows[0].forecast,'Cambiar resultados futuros no cambia una emisión anterior')
+assert.notEqual(backtestProjection(altered,balance,asOf,timezone).rows.at(-1).error,backtest.rows.at(-1).error)
+assert.equal(shiftDay('2020-03-01',-1),'2020-02-29')
+const zoneWeights=weights.map(w=>({...w,measured_at:w.measured_at.replace('12:00','16:00')}))
+assert.equal(run({weights:zoneWeights,timezone:'America/La_Paz'}).ready,true)
+assert.equal(run({weights:zoneWeights,timezone:'America/New_York'}).ready,true,'La ventana usa días calendario durante el cambio de horario')
+assert.deepEqual(weights[0],{id:'0',measured_at:`${start}T12:00Z`,weight_kg:85},'No alterar registros originales')
+console.log('OK: horizonte, escenarios, meta acotada, mínimos, aislamiento de futuro, fluctuaciones, ajuste gradual, evaluación y referencias temporales.')
