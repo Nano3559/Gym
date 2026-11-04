@@ -1,0 +1,25 @@
+{
+  "all": true,
+  "src": [
+    "src"
+  ],
+  "include": [
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
+  "exclude": [
+    "src/data/**",
+    "src/demo/**",
+    "src/main.jsx",
+    "src/lib/supabase.js"
+  ],
+  "reporter": [
+    "html",
+    "lcov",
+    "json-summary",
+    "text-summary"
+  ],
+  "reports-dir": "reports/coverage",
+  "temp-directory": "reports/v8",
+  "exclude-after-remap": true
+}

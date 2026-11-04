@@ -24,7 +24,7 @@ response = call => ({ data: call.table === 'weight_logs'
   ? (call.methods.find(m => m[0] === 'range')[1] === 0 ? Array.from({ length: 500 }, (_, i) => ({ id: i })) : [{ id: 500 }])
   : call.table === 'progress_profiles' ? { timezone: 'UTC' } : [], error: null })
 assert.equal((await service.getProgress()).logs.length, 501)
-for (const call of calls) assert.ok(call.methods.some(m => m[0] === 'eq' && m[1] === 'user_id' && m[2] === 'user-a'))
+for (const call of calls) assert.ok(call.methods.some(m => m[0] === 'eq' && m[1] === (call.table === 'profiles' ? 'id' : 'user_id') && m[2] === 'user-a'))
 response = null
 await service.saveWeightLog({ weight: 80, measuredAt: '2020-01-01T12:00Z', timezone: 'UTC', operationId: 'stable-operation' })
 const insert = calls.at(-1).methods.find(m => m[0] === 'upsert')

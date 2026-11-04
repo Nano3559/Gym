@@ -30,3 +30,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Jenkins reports and actual V8 coverage
+reports/
+coverage/

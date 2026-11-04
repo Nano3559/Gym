@@ -31,7 +31,10 @@
     "test:training": "node scripts/training-integration.test.mjs && node scripts/training-render.test.mjs",
     "test:camera:unit": "node scripts/camera-lifecycle.test.mjs",
     "test:trend": "node scripts/weight-trend.test.mjs && node scripts/weight-trend-render.test.mjs",
-    "test:projection": "node scripts/projection.test.mjs && node scripts/projection-service.test.mjs && node scripts/projection-render.test.mjs"
+    "test:projection": "node scripts/projection.test.mjs && node scripts/projection-service.test.mjs && node scripts/projection-render.test.mjs",
+    "test:ci": "node scripts/ci/run.mjs",
+    "coverage:ci": "node scripts/ci/coverage.mjs",
+    "test:ci:reporting": "node scripts/ci/verify-reporting.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",
@@ -46,9 +49,14 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "autoprefixer": "^10.5.4",
+    "c8": "12.0.0",
     "oxlint": "^1.75.0",
     "postcss": "^8.5.26",
+    "react-test-renderer": "19.2.8",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=24.14.0 <25"
   }
 }
