@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const LEG_RAISE_CONFIG = {
-  upThreshold: 180,
+  upThreshold: 165,
   downThreshold: 90,
   hysteresis: 5,
   direction: 'decrease',

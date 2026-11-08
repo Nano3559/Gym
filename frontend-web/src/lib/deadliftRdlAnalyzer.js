@@ -2,9 +2,9 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { joint } from './poseMetrics.js'
 export const DEADLIFT_RDL_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 23, 25, 27],
   validate: (p,a) => joint(p,23,25,27,a)>130,
-  upThreshold: 175,
+  upThreshold: 165,
   downThreshold: 100,
   hysteresis: 5,
   direction: 'decrease',

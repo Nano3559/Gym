@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const DEADLIFT_SINGLE_LEG_CONFIG = {
-  upThreshold: 175,
+  upThreshold: 165,
   downThreshold: 100,
   hysteresis: 5,
   direction: 'decrease',

@@ -1,0 +1,959 @@
+[
+  {
+    "id": "pushup_knees",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pushup_wide",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pushup_diamond",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pushup_incline",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pushup_decline",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pike_pushup",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "rear_delt_fly",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "upright_row",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "pullup",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "chinup",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "bent_row",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "face_pull",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "triceps_kickback",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "squat_sumo",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "squat_jump",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "squat_cossack",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "deadlift_rdl",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "butt_kicks",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "burpee",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "seal_jack",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "bicycle_crunch",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      13,
+      14,
+      25,
+      26
+    ]
+  },
+  {
+    "id": "toe_touch",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "dead_bug",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "bird_dog",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "superman",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "plank",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "plank_forearm",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "plank_side",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "plank_reverse",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "hollow_hold",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "dead_hang",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "chin_hold",
+    "previousRequired": [
+      0,
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "superman_hold",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "bird_dog_hold",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "boat_pose",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "l_sit",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "chair_pose",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_hamstring",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_quad",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_calf_wall",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32
+    ]
+  },
+  {
+    "id": "st_hip_flexor",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_pigeon",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_figure4",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_butterfly",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_frog",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_cobra",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_childs_pose",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16,
+      29,
+      30
+    ]
+  },
+  {
+    "id": "st_cat_cow",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_downdog",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_shoulder_cross",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_triceps",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_chest_door",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_lat",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "st_spinal_twist",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "st_standing_forward",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "wu_inchworm",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "wu_worlds_greatest",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      15,
+      16,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "wu_shoulder_dislocate",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "bal_single_leg",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "bal_tree",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  {
+    "id": "bal_warrior3",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  },
+  {
+    "id": "bal_standing_quad",
+    "previousRequired": [
+      11,
+      12,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ]
+  }
+]

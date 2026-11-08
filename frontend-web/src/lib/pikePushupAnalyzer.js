@@ -2,9 +2,9 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { joint } from './poseMetrics.js'
 export const PIKE_PUSHUP_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23, 27],
   validate: (p,a) => joint(p,11,23,27,a)<120,
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 80,
   hysteresis: 5,
   direction: 'decrease',

@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { sideIndex, tilt } from './poseMetrics.js'
 export const BENT_ROW_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23],
   validate: (p,a) => tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])>30,
   upThreshold: 160,
   downThreshold: 60,

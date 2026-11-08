@@ -55,18 +55,16 @@ export class IsometricAnalyzer extends BaseAnalyzer {
 
   processFrame(landmarks, aIdx, bIdx, cIdx, timestamp = 0) {
     this.clearRepetitionFlag()
-    const indices = this.visibleSide(landmarks, this.config.requiredIndices ?? [aIdx, bIdx, cIdx])
-    if (!this.checkVisibility(landmarks, indices)) return this.lostFrame()
+    const indices = this.config.requiredSideIndices ? this.requiredLandmarks(landmarks)
+      : this.config.metric && this.config.requiredIndices ? this.config.requiredIndices
+        : this.visibleSide(landmarks, this.config.requiredIndices ?? [aIdx, bIdx, cIdx])
+    if (!this.checkVisibility(landmarks, indices)) return this.lostFrame(timestamp)
     const angle = this.config.metric ? this.config.metric(landmarks, this) : this.computeAngle(landmarks, ...indices)
     if (typeof angle !== 'number' || Number.isNaN(angle)) {
-      if (this.handleLostTracking(timestamp)) {
-        this.stopTimer()
-        return this.snapshot()
-      }
-      return this.snapshot()
+      return this.lostFrame(timestamp)
     }
 
-    this.lastTrackedAt = timestamp
+    this.markTracked(timestamp)
     this.angle = this.smoothValue(angle)
 
     const valid = this.isPostureValid(angle) && this.isPostureValid(this.angle)

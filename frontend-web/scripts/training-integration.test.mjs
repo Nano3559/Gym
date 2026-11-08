@@ -15,7 +15,7 @@ for(const ex of EXERCISE_REGISTRY){
     const s=a.processFrame(frame,1000)
     for(const key of ['isRepetition','repCount','feedback','angle','postureState']) assert.ok(key in s,ex.id+': '+key)
     assert.ok(Number.isFinite(s.angle),ex.id+': finite angle')
-    if(!frame.length || frame[0].visibility===0) { assert.equal(s.postureState,'IDLE',ex.id);assert.equal(s.isRepetition,false,ex.id) }
+    if(!frame.length || frame[0].visibility===0) { assert.equal(s.trackingLost,true,ex.id);assert.equal(s.isRepetition,false,ex.id) }
     if(ex.tipo==='tiempo') for(const key of ['holdSeconds','targetSeconds','isTimerRunning']) assert.ok(key in s,ex.id+': '+key)
   }
   a.reset();assert.equal(a.processFrame([],2000).repCount,0,ex.id)
@@ -27,7 +27,8 @@ a.processFrame(elbow(180),0);a.processFrame(elbow(110),100);a.processFrame(elbow
 assert.equal(a.processFrame(elbow(180),700).repCount,1)
 assert.equal(a.processFrame(elbow(180),800).isRepetition,false)
 a.reset();a.processFrame(elbow(180),0);a.processFrame(elbow(110),10);a.processFrame(elbow(70),20);assert.equal(a.processFrame(elbow(180),30).repCount,0)
-a.reset();a.processFrame(elbow(180),0);a.processFrame(elbow(70),200);a.processFrame(elbow(70),300);a.processFrame([],400);assert.equal(a.processFrame(elbow(180),900).repCount,0)
+a.reset();a.processFrame(elbow(180),0);a.processFrame(elbow(70),200);a.processFrame(elbow(70),300);a.processFrame(elbow(70),600);a.processFrame([],700);assert.equal(a.processFrame(elbow(180),900).repCount,1)
+a.reset();a.processFrame(elbow(180),0);a.processFrame(elbow(70),200);a.processFrame(elbow(70),300);a.processFrame([],400);assert.equal(a.processFrame(elbow(180),1400).repCount,0)
 console.log('ok: complete angle cycle, single-frame repetition flag, speed guard and tracking loss')
 const hold=createPlankAnalyzer();hold.processFrame(pose,0);assert.ok(hold.processFrame(pose,100).holdSeconds>0)
 const before=hold.processFrame(pose,200).holdSeconds;hold.processFrame([],300);assert.equal(hold.processFrame(pose,1500).holdSeconds,before)

@@ -1,8 +1,9 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const PUNCH_CROSS_CONFIG = {
-  upThreshold: 160,
-  downThreshold: 90,
+  // Guardia con el codo flexionado → extensión → regreso a la guardia.
+  upThreshold: 90,
+  downThreshold: 160,
   hysteresis: 5,
   direction: 'increase',
   minTopMs: 100,

@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const SEATED_ROW_CONFIG = {
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 70,
   hysteresis: 5,
   direction: 'decrease',

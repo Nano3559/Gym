@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const GOOD_MORNING_CONFIG = {
-  upThreshold: 175,
+  upThreshold: 165,
   downThreshold: 95,
   hysteresis: 5,
   direction: 'decrease',

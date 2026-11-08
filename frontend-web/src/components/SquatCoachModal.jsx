@@ -6,10 +6,13 @@ import useCamera from '../hooks/useCamera'
 import usePoseDetection from '../hooks/usePoseDetection'
 import useOrientation from '../hooks/useOrientation'
 import CameraPermissionNotice from './CameraPermissionNotice'
+import ExerciseCounter from './ExerciseCounter.jsx'
+import CameraGuidance from './CameraGuidance.jsx'
+import { cameraDescription } from '../data/cameraGuidance.js'
 
 import { EXERCISE_REGISTRY } from '../lib/exerciseRegistry.js'
 import { ExercisePicker } from './ExercisePicker.jsx'
-const AVAILABLE_EXERCISES = EXERCISE_REGISTRY.map(ex => ({ ...ex, name: ex.nombre, metricKey: 'angle', metricLabel: 'Medición principal', description: `Cámara ${ex.vistaCamara}. Colócate de cuerpo entero.`, highlight: [11,12,13,14,15,16,23,24,25,26,27,28] }))
+const AVAILABLE_EXERCISES = EXERCISE_REGISTRY.map(ex => ({ ...ex, name: ex.nombre, metricKey: 'angle', metricLabel: 'Medición principal', description: cameraDescription(ex, `Cámara ${ex.vistaCamara}. Colócate de cuerpo entero.`), highlight: [11,12,13,14,15,16,23,24,25,26,27,28] }))
 
 // Entrenador virtual de ejercicios con cámara. Soporta varios ejercicios
 // (sentadillas, flexiones...) cada uno con su propio analizador de pose.
@@ -99,7 +102,7 @@ export default function SquatCoachModal({ open, onClose }) {
             ))}
           </div>
           <ExercisePicker onSelect={item => setSelectedId(item.id)} />
-          <p className="mt-3 text-sm leading-relaxed text-muted">{exercise.description}</p>
+          <CameraGuidance exercise={exercise} fallback={exercise.description} />
         </div>
 
         {!showCamera ? (
@@ -161,13 +164,7 @@ export default function SquatCoachModal({ open, onClose }) {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-line bg-card p-5 text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted">{exercise.name}</p>
-                <p className="mt-2 font-display text-6xl font-bold text-white" aria-live="polite">
-                  {poseState.repCount}
-                </p>
-                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-muted">{exercise.tipo === 'tiempo' ? 'Segundos restantes en postura válida' : 'Repeticiones válidas'}</p>
-              </div>
+              <ExerciseCounter exercise={exercise} poseState={poseState} />
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">

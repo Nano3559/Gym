@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const V_UP_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 70,
   hysteresis: 5,
   direction: 'decrease',

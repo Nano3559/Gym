@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const CURL_HAMMER_CONFIG = {
   upThreshold: 160,
-  downThreshold: 35,
+  downThreshold: 45,
   hysteresis: 5,
   direction: 'decrease',
   minTopMs: 100,

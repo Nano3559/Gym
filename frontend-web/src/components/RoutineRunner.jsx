@@ -20,6 +20,7 @@ import { getExerciseById } from '../lib/exerciseRegistry.js'
 import PoseOverlay from './PoseOverlay.jsx'
 import MobileControls from './MobileControls.jsx'
 import CameraPermissionNotice from './CameraPermissionNotice.jsx'
+import CameraGuidance from './CameraGuidance.jsx'
 import RestTimer from './RestTimer.jsx'
 
 export default function RoutineRunner({ onClose }) {
@@ -191,6 +192,7 @@ export default function RoutineRunner({ onClose }) {
       <div className="flex-1 overflow-y-auto">
         {/* pb-32 deja libre la barra fija de controles de móvil al final del scroll. */}
         <div className="mx-auto max-w-5xl p-4 pb-32 md:p-6">
+          <CameraGuidance exercise={exerciseMeta} />
           <div className="mb-4">
             <label className="mb-3 block text-sm text-muted">Intensidad de la sesión<select value={intensity} onChange={e => { setIntensity(e.target.value); setSessionIntensity(e.target.value) }} className="ml-3 min-h-12 rounded-xl border border-line bg-card px-3"><option value="">No especificada</option><option value="light">Ligera</option><option value="moderate">Moderada</option><option value="high">Alta</option></select></label>
             <label className="mb-3 block text-sm text-muted">Carga utilizada (kg, opcional)<input type="number" min="0" max="1000" step="0.01" value={loadKg} disabled={status === 'EXERCISING' && !isPaused} onChange={e => { const value=e.target.value; if(value === '' || (Number.isFinite(Number(value)) && Number(value)>=0 && Number(value)<=1000)) setLoadKg(value) }} className="ml-3 min-h-12 w-28 rounded-xl border border-line bg-card px-3 text-white" /></label>

@@ -24,6 +24,7 @@ export class BaseAnalyzer {
     this.repCountRight = 0
     this.lastFeedback = ''
     this.lastTrackedAt = null
+    this.trackingLostAt = null
     this.postureState = POSTURE_STATES.IDLE
     this.isRepetition = false
     this.angle = 0
@@ -85,6 +86,7 @@ export class BaseAnalyzer {
     this.repCountRight = 0
     this.lastFeedback = ''
     this.lastTrackedAt = null
+    this.trackingLostAt = null
     this.postureState = POSTURE_STATES.IDLE
     this.isRepetition = false
     this.angle = null
@@ -94,13 +96,25 @@ export class BaseAnalyzer {
   resetReps() { this.reset() }
 
   handleLostTracking(timestamp) {
-    if (this.isTrackingTimedOut(timestamp) || this.postureState === POSTURE_STATES.IDLE) {
-      this.postureState = POSTURE_STATES.IDLE
-      this.setFeedback('No te veo completo')
-      this.onLostTracking()
-      return true
+    this.lostFrame(timestamp)
+    return this.postureState === POSTURE_STATES.IDLE
+  }
+
+  markTracked(timestamp) {
+    if (this.trackingLostAt !== null) {
+      if (this.isTrackingTimedOut(timestamp)) {
+        this.onLostTracking()
+        this.postureState = POSTURE_STATES.IDLE
+      } else {
+        // Missing frames cannot satisfy minimum movement/phase durations.
+        const gap = Math.max(0, timestamp - this.trackingLostAt)
+        for (const key of ['cycleStart', 'topSince', 'phaseSince', 'startedAt', 'extremeAt']) {
+          if (typeof this[key] === 'number') this[key] += gap
+        }
+      }
+      this.trackingLostAt = null
     }
-    return false
+    this.lastTrackedAt = timestamp
   }
 
   onLostTracking() { this.smoother.reset(); this.resetCycle?.() }
@@ -114,12 +128,40 @@ export class BaseAnalyzer {
     return this.activeSide === 'right' ? right : indices
   }
 
-  lostFrame() {
+  requiredLandmarks(landmarks) {
+    const fixed = this.config.requiredIndices ?? []
+    const sided = this.config.requiredSideIndices ?? []
+    const forSide = side => [...new Set([...fixed, ...sided.map(index => side === 'right' ? (index % 2 ? index + 1 : index - 1) : index)])]
+    if (!sided.length) return [...fixed]
+    const explicit = this.config.side
+    if (explicit === 'left' || explicit === 'right') this.activeSide = explicit
+    else if (!this.activeSide || this.postureState === POSTURE_STATES.IDLE) {
+      const left = forSide('left'), right = forSide('right')
+      const leftVisible = this.checkVisibility(landmarks, left)
+      const rightVisible = this.checkVisibility(landmarks, right)
+      this.activeSide = rightVisible && !leftVisible ? 'right'
+        : leftVisible && !rightVisible ? 'left'
+          : this.getAverageVisibility(landmarks, right) > this.getAverageVisibility(landmarks, left) ? 'right' : 'left'
+    }
+    // Keep one side for the cycle; an occlusion uses tracking grace instead
+    // of splicing a different arm/leg into an ongoing movement.
+    return forSide(this.activeSide)
+  }
+
+  lostFrame(timestamp = 0) {
     this.clearRepetitionFlag()
-    this.onLostTracking()
+    if (this.trackingLostAt === null) {
+      this.trackingLostAt = this.lastTrackedAt ?? timestamp
+      this.smoother.reset()
+    }
     this.stopTimer?.()
-    this.postureState = POSTURE_STATES.IDLE
-    this.setFeedback('No te veo completo')
-    return this.snapshot()
+    if (this.lastTrackedAt === null || this.isTrackingTimedOut(timestamp)) {
+      this.onLostTracking()
+      this.postureState = POSTURE_STATES.IDLE
+      this.setFeedback('No te veo completo. Vuelve a la posición inicial')
+    } else {
+      this.setFeedback('Seguimiento interrumpido brevemente. Conserva la posición')
+    }
+    return { ...this.snapshot(), trackingLost: true }
   }
 }

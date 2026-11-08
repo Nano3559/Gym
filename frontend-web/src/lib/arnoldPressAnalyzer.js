@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const ARNOLD_PRESS_CONFIG = {
   upThreshold: 60,
-  downThreshold: 165,
+  downThreshold: 160,
   hysteresis: 5,
   direction: 'increase',
   minTopMs: 100,

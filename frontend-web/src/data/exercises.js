@@ -1,4 +1,5 @@
 import { EXERCISE_REGISTRY } from '../lib/exerciseRegistry.js'
+import { cameraDescription } from './cameraGuidance.js'
 
 const METRIC_MAP = {
   squat: { key: 'kneeAngle', label: 'Rodilla' },
@@ -53,7 +54,7 @@ export const AVAILABLE_EXERCISES = EXERCISE_REGISTRY.filter((ex) => ex.estado ==
     metricKey: metric.key,
     metricLabel: metric.label,
     highlight: HIGHLIGHT_MAP[ex.id] || [11, 12, 23, 24],
-    description: DESCRIPTION_MAP[ex.id] || `Colócate en posición para realizar ${ex.nombre.toLowerCase()}.`,
+    description: cameraDescription(ex, DESCRIPTION_MAP[ex.id] || `Colócate en posición para realizar ${ex.nombre.toLowerCase()}.`),
     rules: RULES_MAP[ex.id] || 'Mantén la posición correcta para que la repetición cuente.',
   }
 })

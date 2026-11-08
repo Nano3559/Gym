@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const DONKEY_KICK_CONFIG = {
   upThreshold: 90,
-  downThreshold: 170,
+  downThreshold: 165,
   hysteresis: 5,
   direction: 'increase',
   minTopMs: 100,

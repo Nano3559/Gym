@@ -4,7 +4,8 @@ export class SequenceAnalyzer extends CoordRepAnalyzer {
   resetSequence() { this.step = 0; this.phaseSince = null; this.lastPhase = null; this.startedAt = null; this.sequence = null }
   processFrame(points,timestamp=0) {
     this.clearRepetitionFlag()
-    if (!this.checkVisibility(points,this.config.requiredIndices)) { this.resetSequence(); return this.lostFrame() }
+    if (!this.checkVisibility(points,this.config.requiredIndices)) return this.lostFrame(timestamp)
+    this.markTracked(timestamp)
     const phase = this.config.phase(points,this)
     this.angle = Number.isFinite(phase) ? phase : 0
     if (phase !== this.lastPhase) { this.lastPhase = phase; this.phaseSince = timestamp }
@@ -24,4 +25,5 @@ export class SequenceAnalyzer extends CoordRepAnalyzer {
     return this.snapshot()
   }
   reset() { super.reset(); this.resetSequence(); this.center = null }
+  onLostTracking() { super.onLostTracking(); this.resetSequence() }
 }

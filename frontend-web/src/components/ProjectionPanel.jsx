@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getProjection, saveProjection, restartProjectionPeriod } from '../services/projectionService.js'
+import WeeklyResearchPanel from './WeeklyResearchPanel.jsx'
 const button='min-h-12 rounded-xl border border-line px-4 disabled:opacity-50'
 const kg=value=>Number.isFinite(value)?`${value.toFixed(2)} kg`:'No disponible'
 function Evaluation({summary}){
@@ -8,6 +9,7 @@ function Evaluation({summary}){
 export default function ProjectionPanel({timezone,refreshToken}){
   const [packet,setPacket]=useState(null),[revision,setRevision]=useState(0),[error,setError]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false)
   const [confirmRestart,setConfirmRestart]=useState(false)
+  const [researchIssue,setResearchIssue]=useState(null)
   useEffect(()=>{
     let live=true
     getProjection(timezone).then(value=>{if(live){setPacket({value,timezone,refreshToken,revision,operation:crypto.randomUUID()});setError('')}}).catch(e=>{if(live)setError(e.code==='PGRST202'?'Aplica la migración 19 para abrir la proyección.':e.message||'No se pudo consultar la proyección.')})
@@ -18,7 +20,7 @@ export default function ProjectionPanel({timezone,refreshToken}){
   async function save(){
     if(busy||!data?.canSave)return
     setBusy(true);setError('');setMessage('')
-    try{await saveProjection(snapshot,packet.operation);setMessage('Proyección emitida y conservada para evaluar sus resultados.');setRevision(v=>v+1)}
+    try{const id=await saveProjection(snapshot,packet.operation);setResearchIssue(id);setMessage('Proyección emitida y conservada para evaluar sus resultados.');setRevision(v=>v+1)}
     catch(e){setError(e.message||'No se pudo emitir. Puedes reintentar sin duplicarla.')}
     finally{setBusy(false)}
   }
@@ -32,6 +34,7 @@ export default function ProjectionPanel({timezone,refreshToken}){
     {!data?<p role="status">Consultando historial de proyección...</p>:<>
       <ProjectionDetails data={data} busy={busy} onSave={()=>void save()}/>
     </>}
+    <WeeklyResearchPanel projectionId={researchIssue??data?.history[0]?.id}/>
   </section>
 }
 

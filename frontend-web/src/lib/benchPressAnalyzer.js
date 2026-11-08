@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const BENCH_PRESS_CONFIG = {
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 80,
   hysteresis: 5,
   direction: 'decrease',

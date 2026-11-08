@@ -1,7 +1,7 @@
 import { CoordRepAnalyzer } from './CoordRepAnalyzer.js'
 import { spread } from './poseMetrics.js'
 export const SEAL_JACK_CONFIG = {
-  requiredIndices: [11,12,23,24,15,16,27,28], threshold: 2, resetOffset: 1, direction: 'increase',
+  requiredIndices: [11, 12, 23, 24, 15, 16, 27, 28], threshold: 2, resetOffset: 1, direction: 'increase',
   minVisibility: 0.5, smootherWindow: 3, minRepMs: 400,
   minSpread: 1.4,
   metric: (p, a) => spread(p,27,28) > a.config.minSpread ? spread(p,15,16) : 0,

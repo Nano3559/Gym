@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const HIP_THRUST_CONFIG = {
   upThreshold: 100,
-  downThreshold: 175,
+  downThreshold: 165,
   hysteresis: 5,
   direction: 'increase',
   minTopMs: 100,

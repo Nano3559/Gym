@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const FRONT_RAISE_CONFIG = {
-  upThreshold: 15,
+  upThreshold: 25,
   downThreshold: 90,
   hysteresis: 5,
   direction: 'increase',

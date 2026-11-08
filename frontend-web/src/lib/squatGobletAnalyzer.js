@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const SQUAT_GOBLET_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 90,
   hysteresis: 5,
   direction: 'decrease',

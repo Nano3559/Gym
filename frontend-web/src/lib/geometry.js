@@ -1,3 +1,5 @@
+// Points must use the same unit for x and y. Camera input is converted by
+// toAnalysisLandmarks; synthetic/Cartesian callers already use equal units.
 export function distance(a, b) {
   if (!a || !b) return 0
   return Math.hypot(a.x - b.x, a.y - b.y)

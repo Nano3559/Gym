@@ -2,9 +2,9 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { sideIndex, bodyScale } from './poseMetrics.js'
 export const FACE_PULL_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [0, 11, 12, 23, 24], requiredSideIndices: [11, 13, 15],
   validate: (p,a) => Math.abs(p[sideIndex(15,a)].y-p[0].y)/bodyScale(p)<1.2,
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 70,
   hysteresis: 5,
   direction: 'decrease',

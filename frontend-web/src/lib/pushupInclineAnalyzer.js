@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { joint, sideIndex } from './poseMetrics.js'
 export const PUSHUP_INCLINE_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23, 27],
   validate: (p,a) => p[sideIndex(15,a)].y<p[sideIndex(27,a)].y && joint(p,11,23,27,a)>150,
   upThreshold: 160,
   downThreshold: 75,

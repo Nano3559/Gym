@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { horizontal, spread } from './poseMetrics.js'
 export const PUSHUP_DIAMOND_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [11, 12, 23, 24, 15, 16], requiredSideIndices: [11, 13, 15, 23],
   validate: (p) => spread(p,15,16)<0.5 && horizontal(p[11],p[23]),
   upThreshold: 160,
   downThreshold: 70,

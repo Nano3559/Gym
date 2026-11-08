@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const BENCH_DIP_CONFIG = {
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 90,
   hysteresis: 5,
   direction: 'decrease',

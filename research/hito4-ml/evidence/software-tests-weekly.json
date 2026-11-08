@@ -1,0 +1,11 @@
+{
+  "tests": 62,
+  "passed": 62,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "synthetic_only": true,
+  "real_pilot_executed": false,
+  "production_model_enabled": false,
+  "successful": true
+}

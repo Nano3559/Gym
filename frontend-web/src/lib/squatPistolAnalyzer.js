@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const SQUAT_PISTOL_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 80,
   hysteresis: 5,
   direction: 'decrease',

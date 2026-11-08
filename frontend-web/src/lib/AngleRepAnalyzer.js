@@ -59,8 +59,11 @@ export class AngleRepAnalyzer extends BaseAnalyzer {
 
   processFrame(landmarks, aIdx, bIdx, cIdx, timestamp = 0) {
     this.clearRepetitionFlag()
-    const indices = this.visibleSide(landmarks, [aIdx, bIdx, cIdx])
-    if (!this.checkVisibility(landmarks, [...indices, ...(this.config.requiredIndices ?? [])])) return this.lostFrame()
+    const sideAware = this.config.requiredSideIndices?.length
+    const required = sideAware ? this.requiredLandmarks(landmarks) : null
+    const indices = sideAware ? [aIdx, bIdx, cIdx].map(index => this.activeSide === 'right' ? index + 1 : index)
+      : this.visibleSide(landmarks, [aIdx, bIdx, cIdx])
+    if (!this.checkVisibility(landmarks, required ?? [...indices, ...(this.config.requiredIndices ?? [])])) return this.lostFrame(timestamp)
     if (this.config.validate && !this.config.validate(landmarks,this)) {
       this.resetCycle(); this.postureState = POSTURE_STATES.IDLE
       this.setFeedback('Corrige la postura y vuelve a la posición inicial')
@@ -68,11 +71,10 @@ export class AngleRepAnalyzer extends BaseAnalyzer {
     }
     const angle = this.computeAngle(landmarks, ...indices)
     if (typeof angle !== 'number' || Number.isNaN(angle)) {
-      if (this.handleLostTracking(timestamp)) return this.snapshot()
-      return this.snapshot()
+      return this.lostFrame(timestamp)
     }
 
-    this.lastTrackedAt = timestamp
+    this.markTracked(timestamp)
     this.angle = this.smoothValue(angle)
 
     if (this.postureState === POSTURE_STATES.IDLE) {

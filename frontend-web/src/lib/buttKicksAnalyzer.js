@@ -1,7 +1,7 @@
 import { CoordRepAnalyzer } from './CoordRepAnalyzer.js'
 import { joint } from './poseMetrics.js'
 export const BUTT_KICKS_CONFIG = {
-  requiredIndices: [11,12,23,24,25,26,27,28], threshold: 110, resetOffset: 25, direction: 'increase',
+  requiredIndices: [], requiredSideIndices: [23, 25, 27], threshold: 110, resetOffset: 25, direction: 'increase',
   minVisibility: 0.5, smootherWindow: 3, minRepMs: 400,
   
   metric: (p, a) => 180 - joint(p,23,25,27,a),

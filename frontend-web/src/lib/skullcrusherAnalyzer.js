@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const SKULLCRUSHER_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 160,
   downThreshold: 70,
   hysteresis: 5,
   direction: 'decrease',

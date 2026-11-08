@@ -1,0 +1,1600 @@
+[
+  {
+    "id": "pushup_knees",
+    "name": "Flexiones con rodillas apoyadas",
+    "file": "src/lib/pushupKneesAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 75,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23,
+        25
+      ],
+      "validate": "(p,a) => joint(p,11,23,25,a)>150 && horizontal(p[sideIndex(11,a)],p[sideIndex(23,a)])"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 75
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pushup_wide",
+    "name": "Flexiones abiertas",
+    "file": "src/lib/pushupWideAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 80,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [
+        11,
+        12,
+        23,
+        24,
+        15,
+        16
+      ],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23
+      ],
+      "validate": "(p) => spread(p,15,16)>1.2 && horizontal(p[11],p[23])"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 80
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pushup_diamond",
+    "name": "Flexiones diamante",
+    "file": "src/lib/pushupDiamondAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [
+        11,
+        12,
+        23,
+        24,
+        15,
+        16
+      ],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23
+      ],
+      "validate": "(p) => spread(p,15,16)<0.5 && horizontal(p[11],p[23])"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 70
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pushup_incline",
+    "name": "Flexiones inclinadas",
+    "file": "src/lib/pushupInclineAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 75,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23,
+        27
+      ],
+      "validate": "(p,a) => p[sideIndex(15,a)].y<p[sideIndex(27,a)].y && joint(p,11,23,27,a)>150"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 75
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pushup_decline",
+    "name": "Flexiones declinadas",
+    "file": "src/lib/pushupDeclineAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 65,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23,
+        27
+      ],
+      "validate": "(p,a) => p[sideIndex(27,a)].y<p[sideIndex(15,a)].y && joint(p,11,23,27,a)>150"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 65
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pike_pushup",
+    "name": "Flexiones pike",
+    "file": "src/lib/pikePushupAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 80,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23,
+        27
+      ],
+      "validate": "(p,a) => joint(p,11,23,27,a)<120"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 80
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "bench_press",
+    "name": "Press de banca",
+    "file": "src/lib/benchPressAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 80,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 80
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "incline_press",
+    "name": "Press inclinado con mancuernas",
+    "file": "src/lib/inclinePressAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 80,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 80
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "bench_dip",
+    "name": "Fondos en banco",
+    "file": "src/lib/benchDipAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 90
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "dip_parallel",
+    "name": "Fondos en paralelas",
+    "file": "src/lib/dipParallelAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 85,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 85
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "curl_hammer",
+    "name": "Curl martillo",
+    "file": "src/lib/curlHammerAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 35,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 45
+    },
+    "reason": "contracción visual: no exigir 30–35° exactos"
+  },
+  {
+    "id": "curl_alternate",
+    "name": "Curl alterno",
+    "file": "src/lib/curlAlternateAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 30,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 45
+    },
+    "reason": "contracción visual: no exigir 30–35° exactos"
+  },
+  {
+    "id": "curl_concentration",
+    "name": "Curl concentrado",
+    "file": "src/lib/curlConcentrationAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 150,
+      "downThreshold": 35,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 150,
+      "downThreshold": 45
+    },
+    "reason": "contracción visual: no exigir 30–35° exactos"
+  },
+  {
+    "id": "front_raise",
+    "name": "Elevaciones frontales",
+    "file": "src/lib/frontRaiseAnalyzer.js",
+    "indices": [
+      23,
+      11,
+      13
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 15,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 25,
+      "downThreshold": 90
+    },
+    "reason": "inicio con brazos bajos: margen de 5–10° de proyección"
+  },
+  {
+    "id": "rear_delt_fly",
+    "name": "Pájaros",
+    "file": "src/lib/rearDeltFlyAnalyzer.js",
+    "indices": [
+      23,
+      11,
+      13
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 20,
+      "downThreshold": 85,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        23,
+        11,
+        13
+      ],
+      "validate": "(p,a) => tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])>30"
+    },
+    "after": {
+      "upThreshold": 25,
+      "downThreshold": 85
+    },
+    "reason": "inicio con brazos bajos: margen de 5–10° de proyección"
+  },
+  {
+    "id": "shoulder_press",
+    "name": "Press militar",
+    "file": "src/lib/shoulderPressAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 160,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 160
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "arnold_press",
+    "name": "Press Arnold",
+    "file": "src/lib/arnoldPressAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 60,
+      "downThreshold": 165,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 60,
+      "downThreshold": 160
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "upright_row",
+    "name": "Remo al mentón",
+    "file": "src/lib/uprightRowAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 60,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23
+      ],
+      "validate": "(p,a) => p[sideIndex(15,a)].y<p[sideIndex(23,a)].y"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 60
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "lat_pulldown",
+    "name": "Jalón al pecho",
+    "file": "src/lib/latPulldownAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 55,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 55
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "pullup",
+    "name": "Dominadas",
+    "file": "src/lib/pullupAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 50,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15
+      ],
+      "validate": "(p,a) => p[sideIndex(15,a)].y<p[sideIndex(11,a)].y"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 50
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "chinup",
+    "name": "Dominadas supinas",
+    "file": "src/lib/chinupAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 45,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15
+      ],
+      "validate": "(p,a) => p[sideIndex(15,a)].y<p[sideIndex(11,a)].y"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 45
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "seated_row",
+    "name": "Remo sentado en polea",
+    "file": "src/lib/seatedRowAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 70
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "bent_row",
+    "name": "Remo con barra",
+    "file": "src/lib/bentRowAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 60,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23
+      ],
+      "validate": "(p,a) => tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])>30"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 60
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "single_arm_row",
+    "name": "Remo a una mano",
+    "file": "src/lib/singleArmRowAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 160,
+      "downThreshold": 60,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 60
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "inverted_row",
+    "name": "Remo invertido",
+    "file": "src/lib/invertedRowAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 70
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "face_pull",
+    "name": "Face pull",
+    "file": "src/lib/facePullAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 165,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [
+        0,
+        11,
+        12,
+        23,
+        24
+      ],
+      "requiredSideIndices": [
+        11,
+        13,
+        15
+      ],
+      "validate": "(p,a) => Math.abs(p[sideIndex(15,a)].y-p[0].y)/bodyScale(p)<1.2"
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 70
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "triceps_pushdown",
+    "name": "Extensión de tríceps en polea",
+    "file": "src/lib/tricepsPushdownAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 45,
+      "downThreshold": 165,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 45,
+      "downThreshold": 160
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "triceps_overhead",
+    "name": "Extensión de tríceps sobre la cabeza",
+    "file": "src/lib/tricepsOverheadAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 60,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 60
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "skullcrusher",
+    "name": "Press francés",
+    "file": "src/lib/skullcrusherAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 160,
+      "downThreshold": 70
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "triceps_kickback",
+    "name": "Patada de tríceps",
+    "file": "src/lib/tricepsKickbackAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 170,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        13,
+        15,
+        23
+      ],
+      "validate": "(p,a) => tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])>30"
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 160
+    },
+    "reason": "extensión de codo: margen visual de 5–10°"
+  },
+  {
+    "id": "squat_sumo",
+    "name": "Sentadilla sumo",
+    "file": "src/lib/squatSumoAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 95,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [
+        11,
+        12,
+        23,
+        24,
+        27,
+        28
+      ],
+      "requiredSideIndices": [
+        23,
+        25,
+        27
+      ],
+      "validate": "(p) => spread(p,27,28)>1.4"
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 95
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "squat_goblet",
+    "name": "Sentadilla goblet",
+    "file": "src/lib/squatGobletAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "squat_pistol",
+    "name": "Sentadilla a una pierna",
+    "file": "src/lib/squatPistolAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 80,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 80
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "squat_cossack",
+    "name": "Sentadilla cosaca",
+    "file": "src/lib/squatCossackAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [
+        11,
+        12,
+        23,
+        24,
+        27,
+        28
+      ],
+      "requiredSideIndices": [
+        23,
+        25,
+        27
+      ],
+      "validate": "(p) => spread(p,27,28)>1.5"
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "squat_bulgarian",
+    "name": "Sentadilla búlgara",
+    "file": "src/lib/squatBulgarianAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "lunge_reverse",
+    "name": "Zancada hacia atrás",
+    "file": "src/lib/lungeReverseAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "lunge_lateral",
+    "name": "Zancada lateral",
+    "file": "src/lib/lungeLateralAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 95,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 95
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "lunge_walking",
+    "name": "Zancadas caminando",
+    "file": "src/lib/lungeWalkingAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "step_up",
+    "name": "Subida al cajón",
+    "file": "src/lib/stepUpAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 100,
+      "downThreshold": 170,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 100,
+      "downThreshold": 165
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "calf_raise_seated",
+    "name": "Pantorrillas sentado",
+    "file": "src/lib/calfRaiseSeatedAnalyzer.js",
+    "indices": [
+      25,
+      27,
+      31
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 130,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 130
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "deadlift",
+    "name": "Peso muerto convencional",
+    "file": "src/lib/deadliftAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 175,
+      "downThreshold": 95,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 95
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "deadlift_rdl",
+    "name": "Peso muerto rumano",
+    "file": "src/lib/deadliftRdlAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 175,
+      "downThreshold": 100,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100,
+      "requiredIndices": [],
+      "requiredSideIndices": [
+        11,
+        23,
+        25,
+        27
+      ],
+      "validate": "(p,a) => joint(p,23,25,27,a)>130"
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 100
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "deadlift_single_leg",
+    "name": "Peso muerto a una pierna",
+    "file": "src/lib/deadliftSingleLegAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 175,
+      "downThreshold": 100,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 100
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "good_morning",
+    "name": "Buenos días",
+    "file": "src/lib/goodMorningAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 175,
+      "downThreshold": 95,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 95
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "hip_thrust",
+    "name": "Empuje de cadera",
+    "file": "src/lib/hipThrustAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 100,
+      "downThreshold": 175,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 100,
+      "downThreshold": 165
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "glute_bridge",
+    "name": "Puente de glúteos",
+    "file": "src/lib/gluteBridgeAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 110,
+      "downThreshold": 175,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 110,
+      "downThreshold": 165
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "leg_press",
+    "name": "Prensa de piernas",
+    "file": "src/lib/legPressAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 160,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 160
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "leg_extension",
+    "name": "Extensión de cuádriceps",
+    "file": "src/lib/legExtensionAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 170,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 165
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "leg_curl",
+    "name": "Curl femoral",
+    "file": "src/lib/legCurlAnalyzer.js",
+    "indices": [
+      23,
+      25,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 50,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 50
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "donkey_kick",
+    "name": "Patada de glúteo",
+    "file": "src/lib/donkeyKickAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 170,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 165
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "situp",
+    "name": "Abdominales completos",
+    "file": "src/lib/situpAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      25
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 130,
+      "downThreshold": 60,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 130,
+      "downThreshold": 60
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "leg_raise",
+    "name": "Elevación de piernas",
+    "file": "src/lib/legRaiseAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 180,
+      "downThreshold": 90,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 90
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "v_up",
+    "name": "V-up",
+    "file": "src/lib/vUpAnalyzer.js",
+    "indices": [
+      11,
+      23,
+      27
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 170,
+      "downThreshold": 70,
+      "hysteresis": 5,
+      "direction": "decrease",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 165,
+      "downThreshold": 70
+    },
+    "reason": "evitar exigir alineación casi exacta de 170–180°"
+  },
+  {
+    "id": "dumbbell_fly",
+    "name": "Aperturas con mancuernas",
+    "file": "src/lib/dumbbellFlyAnalyzer.js",
+    "indices": [
+      11,
+      12,
+      13
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 50,
+      "downThreshold": 140,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100,
+      "requiredIndices": [
+        11,
+        12,
+        13,
+        14
+      ],
+      "minOutwardProjection": 0.5,
+      "maxClosedProjection": 0.5
+    },
+    "after": {
+      "upThreshold": 50,
+      "downThreshold": 140
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  },
+  {
+    "id": "punch_cross",
+    "name": "Golpes de boxeo",
+    "file": "src/lib/punchCrossAnalyzer.js",
+    "indices": [
+      11,
+      13,
+      15
+    ],
+    "before": {
+      "minVisibility": 0.5,
+      "smootherWindow": 3,
+      "minRepMs": 400,
+      "trackingTimeoutMs": 900,
+      "upThreshold": 90,
+      "downThreshold": 160,
+      "hysteresis": 5,
+      "direction": "increase",
+      "minTopMs": 100
+    },
+    "after": {
+      "upThreshold": 90,
+      "downThreshold": 160
+    },
+    "reason": "Conservado: sin extremo numérico que justifique cambiarlo sin videos"
+  }
+]

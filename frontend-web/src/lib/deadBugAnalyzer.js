@@ -1,7 +1,7 @@
 import { CoordRepAnalyzer } from './CoordRepAnalyzer.js'
 import { angleAt, sideIndex, joint } from './poseMetrics.js'
 export const DEAD_BUG_CONFIG = {
-  requiredIndices: [11,12,23,24,15,16,25,26,27,28], threshold: 160, resetOffset: 40, direction: 'increase',
+  requiredIndices: [], requiredSideIndices: [15, 11, 23, 24, 26, 28], threshold: 160, resetOffset: 40, direction: 'increase',
   minVisibility: 0.5, smootherWindow: 3, minRepMs: 400,
   
   metric: (p, a) => Math.min(joint(p,15,11,23,a), angleAt(p[sideIndex(24,a)],p[sideIndex(26,a)],p[sideIndex(28,a)])),

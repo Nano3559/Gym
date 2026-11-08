@@ -47,13 +47,14 @@ export class CoordRepAnalyzer extends BaseAnalyzer {
 
   processFrame(landmarks, idx, timestamp = 0) {
     this.clearRepetitionFlag()
-    if (!this.checkVisibility(landmarks, this.config.requiredIndices ?? [idx])) return this.lostFrame()
+    const required = this.config.requiredSideIndices ? this.requiredLandmarks(landmarks) : this.config.requiredIndices ?? [idx]
+    if (!this.checkVisibility(landmarks, required)) return this.lostFrame(timestamp)
     const value = this.computeMetric(landmarks, idx)
     if (typeof value !== 'number' || Number.isNaN(value)) {
-      return this.lostFrame()
+      return this.lostFrame(timestamp)
     }
 
-    this.lastTrackedAt = timestamp
+    this.markTracked(timestamp)
     this.rawValue = value
     this.angle = this.smoothValue(value)
 

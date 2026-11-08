@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const CURL_CONCENTRATION_CONFIG = {
   upThreshold: 150,
-  downThreshold: 35,
+  downThreshold: 45,
   hysteresis: 5,
   direction: 'decrease',
   minTopMs: 100,

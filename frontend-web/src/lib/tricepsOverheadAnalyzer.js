@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const TRICEPS_OVERHEAD_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 160,
   downThreshold: 60,
   hysteresis: 5,
   direction: 'decrease',

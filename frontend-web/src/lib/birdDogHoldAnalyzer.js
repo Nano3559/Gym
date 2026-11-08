@@ -2,8 +2,8 @@ import { IsometricAnalyzer } from './IsometricAnalyzer.js'
 import { angleAt, horizontal, sideIndex, joint } from './poseMetrics.js'
 export const BIRD_DOG_HOLD_CONFIG = {
   targetSeconds: 30, validMin: 1, validMax: 1, minVisibility: 0.5, smootherWindow: 1,
-  requiredIndices: [11,12,23,24,25,26,27,28,13,14,15,16], 
-  metric: (p,a) => (joint(p,15,11,23,a)>=165 && angleAt(p[sideIndex(12,a)],p[sideIndex(24,a)],p[sideIndex(28,a)])>=165 && horizontal(p[11],p[23])) ? 1 : 0,
+  requiredIndices: [], requiredSideIndices: [15, 11, 23, 12, 24, 28],
+  metric: (p,a) => (joint(p,15,11,23,a)>=165 && angleAt(p[sideIndex(12,a)],p[sideIndex(24,a)],p[sideIndex(28,a)])>=165 && horizontal(p[sideIndex(11,a)],p[sideIndex(23,a)])) ? 1 : 0,
 }
 export class BirdDogHoldAnalyzer extends IsometricAnalyzer {
   constructor(config = {}) { super({ ...BIRD_DOG_HOLD_CONFIG, ...config }) }

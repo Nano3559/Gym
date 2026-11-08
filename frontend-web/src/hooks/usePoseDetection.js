@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSmoother } from '../lib/geometry'
 import { createAnalyzerForExercise } from '../lib/exerciseRegistry.js'
 import { createFpsMonitor, DEFAULT_PERF_CONFIG } from '../lib/fpsMonitor.js'
+import { toAnalysisLandmarks } from '../lib/poseCoordinates.js'
 
 const MODEL_URL = '/mediapipe/pose_landmarker_lite.task'
 const WASM_PATH = '/mediapipe/wasm'
@@ -12,7 +13,7 @@ const IDLE_STATE = {
   repCount: 0,
   state: 'IDLE',
   stateLabel: 'Sin persona',
-  feedback: 'Colócate de lado, de cuerpo entero',
+  feedback: 'Sigue las indicaciones de posición y encuadre del ejercicio',
   angle: null,
 }
 
@@ -175,7 +176,10 @@ export default function usePoseDetection({
       const landmarks = result?.landmarks?.[0]
       landmarksRef.current = landmarks ?? null
       const analyzer = analyzerRef.current
-      if (analyzer) pushState(analyzer.processFrame(landmarks ?? [], now), landmarks, now)
+      if (analyzer) {
+        const analysisPoints = toAnalysisLandmarks(landmarks ?? [], video.videoWidth, video.videoHeight)
+        pushState(analyzer.processFrame(analysisPoints, now), landmarks, now)
+      }
     }
 
     const pushState = (next, landmarks, now) => {

@@ -2,9 +2,9 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { spread } from './poseMetrics.js'
 export const SQUAT_SUMO_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [11, 12, 23, 24, 27, 28], requiredSideIndices: [23, 25, 27],
   validate: (p) => spread(p,27,28)>1.4,
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 95,
   hysteresis: 5,
   direction: 'decrease',

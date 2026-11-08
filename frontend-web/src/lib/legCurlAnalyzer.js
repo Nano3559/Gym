@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const LEG_CURL_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 50,
   hysteresis: 5,
   direction: 'decrease',

@@ -152,21 +152,46 @@ function pickSide(landmarks, sides) {
 
 export function adaptLegacyAnalyzer(analyzer, exercise) {
   const setup = getSetup(exercise), smoother = createSmoother(5)
+  const timeout = analyzer.config?.trackingTimeoutMs ?? 900
+  const minVisibility = Math.max(0.5, analyzer.config?.minVisibility ?? 0.5)
+  let lastVisibleAt = null, lostAt = null, pausedMs = 0, expired = false, lastResult = null
+  const expire = timestamp => {
+    if (!expired) {
+      analyzer.update(setup.lostInput(timestamp - pausedMs + timeout + 1))
+      expired = true
+    }
+  }
   return { ...analyzer,
     processFrame(landmarks, timestamp=0) {
       const handle = pickSide(landmarks ?? [],setup.sides)
-      const visible=handle?.points?.every(p => p && (p.visibility ?? 0)>=0.5)
+      const visible=handle?.points?.every(p => p && (p.visibility ?? 0)>=minVisibility)
       let result
       if (!visible) {
-        smoother.reset()
-        result = analyzer.update(setup.lostInput(timestamp + (analyzer.config?.trackingTimeoutMs ?? 900) + 1))
-        return { ...result, angle: 0, isRepetition: false, postureState:'IDLE', feedback:'No te veo completo' }
+        if (lostAt === null) { lostAt = lastVisibleAt ?? timestamp; smoother.reset() }
+        const shortLoss = lastVisibleAt !== null && timestamp - lastVisibleAt <= timeout
+        if (!shortLoss) expire(timestamp)
+        result = shortLoss ? lastResult : analyzer.snapshot()
+        return { ...result, angle: Number.isFinite(result?.angle) ? result.angle : 0,
+          isRepetition: false, trackingLost: true,
+          postureState: shortLoss ? result.postureState : 'IDLE',
+          stateLabel: shortLoss ? 'Seguimiento interrumpido' : 'Sin persona',
+          feedback: shortLoss ? 'Seguimiento interrumpido brevemente. Conserva la posición' : 'No te veo completo. Vuelve a la posición inicial' }
+      }
+      if (lostAt !== null) {
+        if (lastVisibleAt !== null && timestamp - lastVisibleAt > timeout) expire(timestamp)
+        pausedMs += Math.max(0, timestamp - lostAt)
+        lostAt = null; expired = false
       }
       const { input,state } = setup.measure(handle.points,smoother)
-      result = analyzer.update({ ...input,timestamp })
-      return { ...result,...state, angle: Number.isFinite(result.angle) ? result.angle : (state[setup.metricKey] ?? 0) }
+      result = analyzer.update({ ...input,timestamp: timestamp - pausedMs })
+      lastVisibleAt = timestamp
+      lastResult = { ...result,...state, angle: Number.isFinite(result.angle) ? result.angle : (state[setup.metricKey] ?? 0) }
+      return lastResult
     },
-    reset() { analyzer.reset(); smoother.reset() },
+    reset() {
+      analyzer.reset(); smoother.reset()
+      lastVisibleAt = null; lostAt = null; pausedMs = 0; expired = false; lastResult = null
+    },
     resetReps() { this.reset() },
   }
 }

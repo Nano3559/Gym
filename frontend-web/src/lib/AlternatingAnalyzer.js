@@ -2,9 +2,10 @@ import { CoordRepAnalyzer } from './CoordRepAnalyzer.js'
 export class AlternatingAnalyzer extends CoordRepAnalyzer {
   processFrame(points, index, timestamp=0) {
     this.clearRepetitionFlag()
-    if (!this.checkVisibility(points,this.config.requiredIndices)) { this.lastExtreme=null; return this.lostFrame() }
+    if (!this.checkVisibility(points,this.config.requiredIndices)) return this.lostFrame(timestamp)
     const value=this.config.metric(points,this)
-    if (!Number.isFinite(value)) return this.lostFrame()
+    if (!Number.isFinite(value)) return this.lostFrame(timestamp)
+    this.markTracked(timestamp)
     this.angle=this.smoothValue(value)
     const side=this.angle>=this.config.threshold ? 'left' : this.angle<=-this.config.threshold ? 'right' : null
     if(side && side!==this.lastExtreme) {
@@ -17,4 +18,5 @@ export class AlternatingAnalyzer extends CoordRepAnalyzer {
     return this.snapshot()
   }
   reset() { super.reset(); this.lastExtreme=null; this.extremeAt=null }
+  onLostTracking() { super.onLostTracking(); this.lastExtreme=null; this.extremeAt=null }
 }

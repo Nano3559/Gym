@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { sideIndex } from './poseMetrics.js'
 export const UPRIGHT_ROW_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23],
   validate: (p,a) => p[sideIndex(15,a)].y<p[sideIndex(23,a)].y,
   upThreshold: 160,
   downThreshold: 60,

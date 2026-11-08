@@ -2,7 +2,7 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { joint, horizontal, sideIndex } from './poseMetrics.js'
 export const PUSHUP_KNEES_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23, 25],
   validate: (p,a) => joint(p,11,23,25,a)>150 && horizontal(p[sideIndex(11,a)],p[sideIndex(23,a)]),
   upThreshold: 160,
   downThreshold: 75,

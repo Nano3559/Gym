@@ -2,9 +2,9 @@ import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 import { sideIndex } from './poseMetrics.js'
 export const CHINUP_CONFIG = {
-  requiredIndices: [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28],
+  requiredIndices: [], requiredSideIndices: [11, 13, 15],
   validate: (p,a) => p[sideIndex(15,a)].y<p[sideIndex(11,a)].y,
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 45,
   hysteresis: 5,
   direction: 'decrease',

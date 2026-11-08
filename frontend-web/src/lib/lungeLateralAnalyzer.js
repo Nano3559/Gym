@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const LUNGE_LATERAL_CONFIG = {
-  upThreshold: 170,
+  upThreshold: 165,
   downThreshold: 95,
   hysteresis: 5,
   direction: 'decrease',

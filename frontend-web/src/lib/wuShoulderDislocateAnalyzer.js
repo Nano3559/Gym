@@ -1,7 +1,7 @@
 import { CoordRepAnalyzer } from './CoordRepAnalyzer.js'
 import { joint } from './poseMetrics.js'
 export const WU_SHOULDER_DISLOCATE_CONFIG = {
-  requiredIndices: [11,12,23,24,13,14,15,16], threshold: 165, resetOffset: 45, direction: 'increase',
+  requiredIndices: [], requiredSideIndices: [11, 13, 15, 23], threshold: 165, resetOffset: 45, direction: 'increase',
   minVisibility: 0.5, smootherWindow: 3, minRepMs: 400,
   
   metric: (p, a) => Math.min(joint(p,11,13,15,a),joint(p,23,11,15,a)),

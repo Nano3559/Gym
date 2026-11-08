@@ -2,7 +2,7 @@ import { IsometricAnalyzer } from './IsometricAnalyzer.js'
 import { bodyScale, tilt, sideIndex, joint } from './poseMetrics.js'
 export const ST_CALF_WALL_CONFIG = {
   targetSeconds: 30, validMin: 1, validMax: 1, minVisibility: 0.5, smootherWindow: 1,
-  requiredIndices: [11,12,23,24,25,26,27,28,29,30,31,32], 
+  requiredIndices: [11, 12, 23, 24], requiredSideIndices: [23, 25, 27, 11, 29, 31],
   metric: (p,a) => (joint(p,23,25,27,a)>=160 && tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])>10 && tilt(p[sideIndex(11,a)],p[sideIndex(23,a)])<45 && Math.abs(p[sideIndex(29,a)].y-p[sideIndex(31,a)].y)/bodyScale(p)<0.12) ? 1 : 0,
 }
 export class StCalfWallAnalyzer extends IsometricAnalyzer {

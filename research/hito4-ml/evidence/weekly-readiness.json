@@ -1,0 +1,20 @@
+{
+  "version": "weekly-pilot-v1",
+  "real_weekly_people_supplied": 0,
+  "real_shadow_pilot_executed": false,
+  "approved_weekly_model": null,
+  "production_enabled": false,
+  "fallback": "observed-weekly-v2",
+  "decision": "Keep the existing descriptive projection. No prospective consented weekly dataset was supplied.",
+  "pending": [
+    "Apply migration 24 and run PostgreSQL security integration checks",
+    "Agree research responsibility, retention and destination before collecting exports",
+    "Collect consented prospective issues and matured day-6..8 weight outcomes",
+    "Freeze a real protocol manifest and meet participant/time split minima",
+    "Train and evaluate the reserved weekly test once",
+    "Run and review the prospective shadow pilot",
+    "Validate production inference, independent approval and controlled rollback"
+  ],
+  "dietfits_three_month_results_authorize_weekly_inference": false,
+  "synthetic_tests_are_real_validation": false
+}

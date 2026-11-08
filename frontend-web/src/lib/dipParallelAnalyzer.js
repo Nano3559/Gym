@@ -1,7 +1,7 @@
 import { AngleRepAnalyzer } from './AngleRepAnalyzer.js'
 
 export const DIP_PARALLEL_CONFIG = {
-  upThreshold: 165,
+  upThreshold: 160,
   downThreshold: 85,
   hysteresis: 5,
   direction: 'decrease',
