@@ -74,12 +74,18 @@ function AppContent() {
 
   // Usuario autenticado (null si no hay sesión). Conserva la forma que el
   // Módulo 1 esperaba: { nombre, ... }.
+  // La fuente principal de rol es app_metadata.gym_role (asignado vía Edge
+  // Function manage-staff o manualmente). El rol JWT genérico (user.role,
+  // normalmente 'authenticated') NUNCA debe usarse como sustituto del rol
+  // funcional del gimnasio.
   const currentUser = useMemo(() => {
     if (!authUser) return null
+    // Priorizar gym_role explícitamente, ignorar el claim JWT 'authenticated'
+    const gymRole = authUser.app_metadata?.gym_role || authUser.app_metadata?.role
     return {
       id: authUser.id,
       email: authUser.email,
-      role: authUser.role || authUser.app_metadata?.gym_role || authUser.app_metadata?.role,
+      role: gymRole || undefined,
       app_metadata: authUser.app_metadata,
       ...(profile || {}),
       nombre: profile?.nombre || 'Cliente',
@@ -490,7 +496,7 @@ function AppContent() {
         onToast={showToast}
         onOpenNewMember={handleNewMemberFromReception}
         isAdminUser={isAdminUser(currentUser)}
-        staffRole={currentUser?.role || 'reception'}
+        staffRole={currentUser?.role || 'member'}
       />
     </div>
   )
