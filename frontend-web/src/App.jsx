@@ -36,6 +36,7 @@ import useBookings from './hooks/useBookings'
 import useMembership from './hooks/useMembership'
 import { isReceptionUser } from './lib/receptionAccess'
 import { isAdminUser } from './lib/adminAccess'
+import { buildCurrentUser, staffRoleOf } from './lib/gymRole'
 
 function AppContent() {
   const { user: authUser, profile, signOut, reloadProfile } = useAuth()
@@ -74,17 +75,14 @@ function AppContent() {
 
   // Usuario autenticado (null si no hay sesión). Conserva la forma que el
   // Módulo 1 esperaba: { nombre, ... }.
-  const currentUser = useMemo(() => {
-    if (!authUser) return null
-    return {
-      id: authUser.id,
-      email: authUser.email,
-      role: authUser.role || authUser.app_metadata?.gym_role || authUser.app_metadata?.role,
-      app_metadata: authUser.app_metadata,
-      ...(profile || {}),
-      nombre: profile?.nombre || 'Cliente',
-    }
-  }, [authUser, profile])
+  // La fuente principal de rol es app_metadata.gym_role (asignado vía Edge
+  // Function manage-staff o manualmente). El rol JWT genérico (user.role,
+  // normalmente 'authenticated') NUNCA debe usarse como sustituto del rol
+  // funcional del gimnasio.
+  const currentUser = useMemo(
+    () => buildCurrentUser(authUser, profile),
+    [authUser, profile],
+  )
 
   // Módulo 2: reservas reales del usuario (Supabase) + locales (fallback/servicios).
   const { bookings: dbBookings, createBooking, cancelBooking } = useBookings(authUser?.id)
@@ -490,7 +488,7 @@ function AppContent() {
         onToast={showToast}
         onOpenNewMember={handleNewMemberFromReception}
         isAdminUser={isAdminUser(currentUser)}
-        staffRole={currentUser?.role || 'reception'}
+        staffRole={staffRoleOf(currentUser)}
       />
     </div>
   )
