@@ -48,7 +48,13 @@ export default function LoginModal({ open, onClose, onGoRegister, onSuccess }) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Iniciar sesión">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Iniciar sesión"
+      closeOnBackdrop={false}
+      closeOnEscape={false}
+    >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <label htmlFor="lg-correo" className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">

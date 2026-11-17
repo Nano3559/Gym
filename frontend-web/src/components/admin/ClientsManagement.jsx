@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Download, Ellipsis, ExternalLink, Plus, RefreshCw, Search, User } from 'lucide-react'
 import Modal from '../ui/Modal'
 import { getMembershipStatus } from '../../lib/membershipStatus'
-import { PLAN_LIST, METODOS_PAGO } from '../../data/adminData'
+import { METODOS_PAGO } from '../../data/adminData'
+import { usePlans } from '../../context/PlansContext'
 import { downloadCsv } from '../../lib/csv'
 
 const STATUS_STYLES = {
@@ -46,6 +47,9 @@ export default function ClientsManagement({
   onUpdateClient,
   onFreezeMembership,
   isAdmin = false,
+  loading = false,
+  error = '',
+  onRetry,
 }) {
   const [filter, setFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
@@ -57,8 +61,10 @@ export default function ClientsManagement({
   const [freezeClient, setFreezeClient] = useState(null)
   const [freezeDays, setFreezeDays] = useState('7')
   const [saving, setSaving] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState('completo')
+  const [selectedPlan, setSelectedPlan] = useState('')
   const [metodoPago, setMetodoPago] = useState('efectivo')
+  const { plans: contextPlans } = usePlans()
+  const historyRequestRef = useRef(0)
 
   const rows = clients
     .filter((c) => {
@@ -82,20 +88,33 @@ export default function ClientsManagement({
         : c.status.key === 'vencida'))
 
   const openDetails = async (client) => {
+    const requestId = historyRequestRef.current + 1
+    historyRequestRef.current = requestId
+
     setDetailClient(client)
+    setHistory({ payments: [], attendance: [] })
     setHistoryLoading(true)
     try {
-      setHistory(await onGetHistory?.(client.id) || { payments: [], attendance: [] })
+      const result = await onGetHistory?.(client.id)
+      if (requestId === historyRequestRef.current) {
+        setHistory(result || { payments: [], attendance: [] })
+      }
     } catch (error) {
-      onToast(`No se pudo cargar el historial: ${error.message}`, 'error')
+      if (requestId === historyRequestRef.current) {
+        setHistory({ payments: [], attendance: [] })
+        onToast(`No se pudo cargar el historial: ${error.message}`, 'error')
+      }
     } finally {
-      setHistoryLoading(false)
+      if (requestId === historyRequestRef.current) {
+        setHistoryLoading(false)
+      }
     }
   }
 
   const openRenew = (client) => {
     setRenewClient(client)
-    setSelectedPlan(client.plan || 'completo')
+    const planMatch = contextPlans.find((p) => p.active && p.code === client.plan)
+    setSelectedPlan(planMatch ? client.plan : contextPlans[0]?.code || '')
     setMetodoPago('efectivo')
   }
 
@@ -108,6 +127,27 @@ export default function ClientsManagement({
 
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed border-line bg-surface/50">
+          <span className="text-sm text-muted">Cargando clientes…</span>
+        </div>
+      )}
+      {!loading && error && (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center">
+          <p className="text-sm text-red-300">{error}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/15"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+            </button>
+          )}
+        </div>
+      )}
+      {!loading && !error && (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {[
@@ -266,7 +306,9 @@ export default function ClientsManagement({
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-muted">
-                    No hay clientes que coincidan con la búsqueda.
+                    {clients.length === 0
+                      ? 'No hay clientes disponibles.'
+                      : 'No hay clientes que coincidan con la búsqueda.'}
                   </td>
                 </tr>
               )}
@@ -301,7 +343,7 @@ export default function ClientsManagement({
                 Plan a renovar
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {PLAN_LIST.map((p) => (
+                {contextPlans.filter((p) => p.active).map((p) => (
                   <button
                     key={p.code}
                     type="button"
@@ -496,6 +538,8 @@ export default function ClientsManagement({
           <button className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-white">Confirmar congelamiento</button>
         </form>
       </Modal>
+      </>
+      )}
     </div>
   )
 }

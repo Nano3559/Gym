@@ -190,7 +190,7 @@ export default function StaffManagement({ onToast }) {
             </select>
           </label>
           <p className="rounded-lg bg-card p-3 text-xs text-muted">
-            Recepción: clientes, asistencia, POS y caja. Entrenador: perfiles mínimos y asistencia; sin finanzas ni gestión de clientes.
+            Recepción: clientes, asistencia, POS y caja. Entrenador: asistencia y perfiles mínimos. Sin finanzas ni gestión de clientes.
           </p>
           <button disabled={saving} className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-white disabled:opacity-50">
             {saving ? 'Guardando…' : 'Guardar cuenta'}

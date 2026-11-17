@@ -1,11 +1,19 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 
-export default function Modal({ open, onClose, title, children, maxWidth = 'max-w-lg' }) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  maxWidth = 'max-w-lg',
+  closeOnBackdrop = true,
+  closeOnEscape = true,
+}) {
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (closeOnEscape && e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -13,7 +21,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 'max-
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open, onClose, closeOnEscape])
 
   if (!open) return null
 
@@ -26,7 +34,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 'max-
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
+        onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
         className={`relative w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl animate-fade-up`}
