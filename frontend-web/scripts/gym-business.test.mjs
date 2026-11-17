@@ -59,6 +59,7 @@ async function auth() {
 const { default: useBookings } = await import('../src/hooks/useBookings.js')
 const { default: useMembership } = await import('../src/hooks/useMembership.js')
 const { default: useAdminClients } = await import('../src/hooks/useAdminClients.js')
+const { default: useAdminDashboard } = await import('../src/hooks/useAdminDashboard.js')
 const payment = await import('../src/services/paymentService.js')
 
 for (const [role, admin, reception] of [['admin',true,false],['reception',false,true],['trainer',false,true],['member',false,false],['unknown',false,false]]) {
@@ -196,4 +197,83 @@ test('membresías: congelación usa RPC y propaga rechazo',async()=>{
  const h=await mount(()=>useAdminClients());globalThis.__gymSupabaseDouble.auth.getSession=async()=>({data:{session:{user}}})
  await h.invoke(v=>v.freezeMembership('membership-a',7));assert.deepEqual(calls.find(c=>c.rpc).args,{p_membership_id:'membership-a',p_days:7})
  rpcReply={error:new Error('No autorizado')};await assert.rejects(h.invoke(v=>v.freezeMembership('membership-a',7)),/No autorizado/)
+})
+test('clientes: excluye administrador autenticado y personal por ID, conserva socios legítimos',async()=>{
+ const h=await mount(()=>useAdminClients({authUser:user,isAdmin:true}))
+ reply=call=>{
+  if(call.table==='staff_accounts')return{data:[{user_id:'staff-user'}],error:null}
+  if(call.table==='profiles')return{data:[
+   {id:user.id,nombre:'Administrador'},
+   {id:'staff-user',nombre:'Personal'},
+   {id:'mateo-user',nombre:'Mateo',apellido:'Morales'},
+  ],error:null}
+  return{data:[],error:null}
+ }
+ await h.invoke(v=>v.refresh())
+ assert.deepEqual(h.current.clients.map(client=>client.id),['mateo-user'])
+ assert.ok(!calls.some(call=>call.auth==='getSession'))
+})
+test('clientes: error de staff_accounts se informa y evita un filtro parcial',async()=>{
+ const h=await mount(()=>useAdminClients({authUser:user,isAdmin:true}))
+ reply=call=>call.table==='staff_accounts'
+  ?{data:null,error:{message:'Permiso denegado'}}
+  :{data:[],error:null}
+ await h.invoke(v=>v.refresh())
+ assert.match(h.current.error,/identificar personal: Permiso denegado/)
+ assert.deepEqual(h.current.clients,[])
+})
+test('clientes: recepción no consulta staff_accounts y mantiene acceso a perfiles',async()=>{
+ const h=await mount(()=>useAdminClients({authUser:user,isAdmin:false}))
+ reply=call=>call.table==='profiles'
+  ?{data:[{id:user.id,nombre:'Recepción'},{id:'mateo-user',nombre:'Mateo'}],error:null}
+  :{data:[],error:null}
+ await h.invoke(v=>v.refresh())
+ assert.deepEqual(h.current.clients.map(client=>client.id),['mateo-user'])
+ assert.ok(!calls.some(call=>call.table==='staff_accounts'))
+})
+test('dashboard: usa el usuario de AuthContext y carga membresías, clases y reservas',async()=>{
+ const h=await mount(()=>useAdminDashboard({authUser:user}))
+ const today=h.current.today
+ reply=call=>{
+  if(call.table==='memberships')return{data:[{user_id:'member-user',fecha_vencimiento:'2099-12-31'}],error:null}
+  if(call.table==='classes')return{data:[
+   {id:'class-today',fecha:today,nombre:'Fuerza',capacidad:10,entrenador:'Staff',hora_inicio:'09:00',reservas_count:0},
+  ],error:null}
+  if(call.table==='bookings')return{data:[{class_id:'class-today'},{class_id:'class-today'}],error:null}
+  return{data:[],error:null}
+ }
+ await h.invoke(v=>v.refresh())
+ assert.equal(h.current.sociosActivos,1)
+ assert.equal(h.current.reservasDelDia,2)
+ assert.equal(h.current.clasesDelDia[0].name,'Fuerza')
+ assert.equal(h.current.sociosError,'')
+ assert.equal(h.current.clasesError,'')
+ assert.ok(!calls.some(call=>call.auth==='getSession'))
+})
+test('dashboard: distingue sesión ausente sin usar datos de demostración',async()=>{
+ const h=await mount(()=>useAdminDashboard({authUser:null}))
+ await h.invoke(v=>v.refresh())
+ assert.equal(h.current.sociosActivos,null)
+ assert.equal(h.current.reservasDelDia,null)
+ assert.equal(h.current.sociosError,'Sin sesión activa')
+ assert.equal(h.current.clasesError,'Sin sesión activa')
+ assert.equal(h.current.demoMode,false)
+ assert.equal(calls.length,0)
+})
+test('dashboard: muestra clases reales aunque falle la consulta de reservas',async()=>{
+ const h=await mount(()=>useAdminDashboard({authUser:user}))
+ const today=h.current.today
+ reply=call=>{
+  if(call.table==='memberships')return{data:[],error:null}
+  if(call.table==='classes')return{data:[
+   {id:'class-today',fecha:today,nombre:'Fuerza',capacidad:10,entrenador:'Staff',hora_inicio:'09:00',reservas_count:3},
+  ],error:null}
+  if(call.table==='bookings')return{data:null,error:{message:'Consulta denegada'}}
+  return{data:[],error:null}
+ }
+ await h.invoke(v=>v.refresh())
+ assert.equal(h.current.clasesDelDia.length,1)
+ assert.equal(h.current.clasesDelDia[0].booked,3)
+ assert.equal(h.current.reservasDelDia,3)
+ assert.match(h.current.clasesError,/Consulta denegada/)
 })

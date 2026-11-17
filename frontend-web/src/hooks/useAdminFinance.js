@@ -1,91 +1,179 @@
-import { useCallback, useState } from 'react'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { useCallback, useRef, useState } from 'react'
+import {
+  currentMonthBounds,
+  periodQueryBounds,
+} from '../lib/financeMetrics'
+import {
+  buildDashboardFinanceSnapshot,
+  previousMonthBounds,
+  summarizeFinancePeriod,
+} from '../lib/dashboardFinanceMetrics'
+import { fetchAllRows } from '../lib/financePagination'
+import {
+  defaultFinanceSource,
+  fetchFinanceRows,
+  hasFinanceSession,
+} from '../services/financeService'
 
-const MONTHLY_INCOME_FALLBACK = 24850
-
-function localDate(value) {
-  const date = new Date(value)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+// Estado inicial honesto: ningún importe ficticio. Mientras `loading` sea
+// verdadero o los indicadores no estén disponibles, los valores permanecen en
+// `null` para que el Dashboard muestre «—» en lugar de un cero engañoso.
+const UNAVAILABLE = {
+  currentIncome: null,
+  previousIncome: null,
+  currentExpenses: null,
+  previousExpenses: null,
+  currentNet: null,
+  previousNet: null,
+  newMembers: null,
+  churned: null,
+  available: false,
+  financeAvailable: false,
+  peopleAvailable: false,
+  authRequired: false,
+  error: '',
+  peopleError: '',
 }
 
-function currentAndPreviousMonth() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const previous = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  return {
-    current: localDate(start),
-    previous: localDate(previous),
-    start: start.toISOString(),
-    end: end.toISOString(),
-    previousStart: previous.toISOString(),
-  }
+function errorMessage(error) {
+  if (!error) return 'error desconocido'
+  return error.message || String(error)
 }
 
-export default function useAdminFinance() {
-  const [finance, setFinance] = useState({
-    currentIncome: MONTHLY_INCOME_FALLBACK,
-    previousIncome: 0,
-    currentExpenses: 0,
-    previousExpenses: 0,
-    newMembers: 0,
-    churned: 0,
-    available: false,
-  })
-  const [error, setError] = useState('')
+/**
+ * Indicadores financieros del Dashboard.
+ *
+ * Reutiliza el servicio y la lógica ya probados de Finanzas:
+ * - `fetchFinanceRows` consulta las tres fuentes con paginación y rango.
+ * - `fetchAllRows` pagina `profiles`, `memberships` y los pagos necesarios
+ *   para conservar la fórmula actual de altas/bajas.
+ *
+ * Los importes financieros y los indicadores de personas se resuelven por
+ * separado: un fallo de personas no oculta los importes, y un fallo
+ * financiero invalida todos los importes.
+ */
+export default function useAdminFinance({ financeSource = defaultFinanceSource } = {}) {
+  const { configured, client } = financeSource || {}
+  const [state, setState] = useState({ ...UNAVAILABLE, loading: true })
+  const requestRef = useRef(0)
 
   const refresh = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
-    const bounds = currentAndPreviousMonth()
-    const [payments, sales, expenses, profiles, memberships] = await Promise.all([
-      supabase
-        .from('payments')
-        .select('monto, created_at, user_id')
-        .eq('estado_pago', 'completado')
-        .gte('created_at', bounds.previousStart)
-        .lt('created_at', bounds.end),
-      supabase
-        .from('pos_sales')
-        .select('total, created_at')
-        .gte('created_at', bounds.previousStart)
-        .lt('created_at', bounds.end),
-      supabase
-        .from('operating_expenses')
-        .select('monto, created_at')
-        .gte('created_at', bounds.previousStart)
-        .lt('created_at', bounds.end),
-      supabase
-        .from('profiles')
-        .select('id, created_at')
-        .gte('created_at', bounds.start)
-        .lt('created_at', bounds.end),
-      supabase
-        .from('memberships')
-        .select('user_id, fecha_vencimiento')
-        .gte('fecha_vencimiento', bounds.start)
-        .lt('fecha_vencimiento', bounds.end),
-    ])
-    const failed = [payments, sales, expenses, profiles, memberships].find((result) => result.error)
-    if (failed?.error) {
-      setError(failed.error.message)
-      throw failed.error
-    }
-    const sum = (rows, valueKey, month) =>
-      (rows || []).filter((row) => localDate(row.created_at) === month)
-        .reduce((total, row) => total + Number(row[valueKey] || 0), 0)
-    const renewed = new Set((payments.data || []).map((payment) => payment.user_id))
-    const expiredUsers = new Set((memberships.data || []).map((membership) => membership.user_id))
-    setFinance({
-      currentIncome: sum(payments.data, 'monto', bounds.current) + sum(sales.data, 'total', bounds.current),
-      previousIncome: sum(payments.data, 'monto', bounds.previous) + sum(sales.data, 'total', bounds.previous),
-      currentExpenses: sum(expenses.data, 'monto', bounds.current),
-      previousExpenses: sum(expenses.data, 'monto', bounds.previous),
-      newMembers: profiles.data?.length || 0,
-      churned: [...expiredUsers].filter((userId) => !renewed.has(userId)).length,
-      available: true,
-    })
-    setError('')
-  }, [])
+    const requestId = requestRef.current + 1
+    requestRef.current = requestId
 
-  return { ...finance, error, refresh }
+    // Invalida de inmediato: ninguna cifra anterior puede presentarse como
+    // actual mientras se consulta la nueva información.
+    setState((current) => ({ ...current, ...UNAVAILABLE, loading: true }))
+
+    const stillCurrent = () => requestId === requestRef.current
+    const finish = (patch) => {
+      if (!stillCurrent()) return
+      setState((current) => ({ ...current, ...patch, loading: false }))
+    }
+
+    if (!configured || !client) {
+      finish({
+        error: 'Supabase no está configurado: no hay datos financieros disponibles.',
+      })
+      return
+    }
+
+    try {
+      const hasSession = await hasFinanceSession(client)
+      if (!stillCurrent()) return
+      if (!hasSession) {
+        finish({ authRequired: true })
+        return
+      }
+
+      const now = new Date()
+      const currentBounds = currentMonthBounds(now)
+      const previousBounds = previousMonthBounds(now)
+      const currentQuery = periodQueryBounds(currentBounds.from, currentBounds.to)
+      const previousQuery = periodQueryBounds(previousBounds.from, previousBounds.to)
+      if (!currentQuery || !previousQuery) {
+        throw new Error('No se pudo calcular el período financiero.')
+      }
+
+      // --- Fuentes financieras: actual y anterior ---
+      let snapshot = null
+      let financeAvailable = false
+      let financeError = ''
+      try {
+        const [currentRows, previousRows] = await Promise.all([
+          fetchFinanceRows({ client, from: currentBounds.from, to: currentBounds.to }),
+          fetchFinanceRows({ client, from: previousBounds.from, to: previousBounds.to }),
+        ])
+        if (!stillCurrent()) return
+        snapshot = buildDashboardFinanceSnapshot({
+          current: summarizeFinancePeriod({ ...currentRows, ...currentBounds }),
+          previous: summarizeFinancePeriod({ ...previousRows, ...previousBounds }),
+        })
+        financeAvailable = true
+      } catch (financeFailure) {
+        if (!stillCurrent()) return
+        financeError = `No se pudieron cargar los indicadores financieros: ${errorMessage(financeFailure)}`
+      }
+
+      // --- Indicadores de personas: independientes de los importes ---
+      let people = null
+      let peopleAvailable = false
+      let peopleError = ''
+      try {
+        const [profiles, memberships, renewals] = await Promise.all([
+          fetchAllRows(() => client
+            .from('profiles')
+            .select('id, created_at')
+            .gte('created_at', currentQuery.start)
+            .lt('created_at', currentQuery.end)
+            .order('id', { ascending: true })),
+          fetchAllRows(() => client
+            .from('memberships')
+            .select('user_id, fecha_vencimiento')
+            .gte('fecha_vencimiento', currentQuery.start)
+            .lt('fecha_vencimiento', currentQuery.end)
+            .order('user_id', { ascending: true })),
+          // Pagos necesarios para conservar la fórmula actual de `churned`:
+          // una membresía vencida cuenta como renovada si el usuario tiene
+          // algún pago completado entre el mes anterior y el actual.
+          fetchAllRows(() => client
+            .from('payments')
+            .select('id, user_id, created_at')
+            .eq('estado_pago', 'completado')
+            .gte('created_at', previousQuery.start)
+            .lt('created_at', currentQuery.end)
+            .order('id', { ascending: true })),
+        ])
+        if (!stillCurrent()) return
+        const renewed = new Set((renewals || []).map((payment) => payment.user_id))
+        const expiredUsers = new Set((memberships || []).map((membership) => membership.user_id))
+        people = {
+          newMembers: (profiles || []).length,
+          churned: [...expiredUsers].filter((userId) => !renewed.has(userId)).length,
+        }
+        peopleAvailable = true
+      } catch (peopleFailure) {
+        if (!stillCurrent()) return
+        peopleError = financeAvailable
+          ? `No se pudieron cargar las altas y bajas de socios: ${errorMessage(peopleFailure)}. Los importes financieros sí están disponibles.`
+          : 'No se pudieron cargar los indicadores de personas.'
+      }
+
+      finish({
+        ...(snapshot || {}),
+        ...(people || {}),
+        financeAvailable,
+        peopleAvailable,
+        available: financeAvailable && peopleAvailable,
+        error: financeError,
+        peopleError,
+      })
+    } catch (failure) {
+      finish({
+        error: `No se pudieron cargar los indicadores financieros: ${errorMessage(failure)}`,
+      })
+    }
+  }, [client, configured])
+
+  return { ...state, refresh }
 }

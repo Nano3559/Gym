@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { seedClients, seedAttendance, todayISO, PLAN_NAMES } from '../data/adminData'
+import { seedClients, seedAttendance, todayISO } from '../data/adminData'
 import { getRegisteredClients, toClientShape } from '../lib/registeredClients'
 
 function fmtHora(d = new Date()) {
@@ -11,10 +11,13 @@ function fmtHora(d = new Date()) {
  * Datos del Módulo 6 (recepción / administración): clientes y asistencias del día.
  * Si Supabase está configurado, los errores de lectura se propagan a la UI.
  */
-export default function useAdminClients() {
-  const [clients, setClients] = useState(seedClients)
-  const [attendance, setAttendance] = useState(seedAttendance)
-  const [loading, setLoading] = useState(false)
+export default function useAdminClients({ authUser = null, isAdmin = false } = {}) {
+  const authUserId = authUser?.id || null
+  const [clients, setClients] = useState(isSupabaseConfigured ? [] : seedClients)
+  const [attendance, setAttendance] = useState(isSupabaseConfigured ? [] : seedAttendance)
+  const [loading, setLoading] = useState(isSupabaseConfigured)
+  const [source, setSource] = useState(isSupabaseConfigured ? 'remote' : 'local')
+  const [error, setError] = useState('')
   const mounted = useRef(true)
 
   useEffect(() => {
@@ -24,16 +27,33 @@ export default function useAdminClients() {
     }
   }, [])
 
+  const requestRef = useRef(0)
+
   const refresh = useCallback(async () => {
+    const requestId = requestRef.current + 1
+    requestRef.current = requestId
+
     setLoading(true)
+    setError('')
     try {
-      let reales = []
-      let hasRemoteSession = false
       if (isSupabaseConfigured && supabase) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-        if (sessionError) throw sessionError
-        if (sessionData?.session) {
-          hasRemoteSession = true
+        if (authUserId) {
+          // Obtener IDs de personal para excluirlos de la lista de clientes.
+          // Las cuentas de administrador, recepción y entrenador se registran en
+          // staff_accounts y no deben aparecer como socios.
+          const staffUserIds = new Set([authUserId])
+          if (isAdmin) {
+            const { data: staffData, error: staffError } = await supabase
+              .from('staff_accounts')
+              .select('user_id')
+            if (staffError) {
+              throw new Error(`Error al identificar personal: ${staffError.message}`)
+            }
+            for (const staff of staffData || []) {
+              if (staff.user_id) staffUserIds.add(staff.user_id)
+            }
+          }
+
           // Perfiles, planes y membresías para el panel de recepción.
           const [perfilesRes, planesRes, membresiasRes, paymentsRes, attendanceRes] = await Promise.all([
             supabase
@@ -53,6 +73,11 @@ export default function useAdminClients() {
           if (membresiasRes.error) throw membresiasRes.error
           if (paymentsRes.error) throw paymentsRes.error
           if (attendanceRes.error) throw attendanceRes.error
+
+          // Excluir perfiles de personal de la lista de clientes.
+          const perfilesFiltrados = (perfilesRes.data || []).filter(
+            (p) => !staffUserIds.has(p.id)
+          )
 
           const deudaPorUsuario = new Map()
           for (const payment of paymentsRes.data || []) {
@@ -87,7 +112,7 @@ export default function useAdminClients() {
             }
           }
 
-          reales = await Promise.all((perfilesRes.data || []).map(async (p) => {
+          const reales = await Promise.all(perfilesFiltrados.map(async (p) => {
             const mem = membresiaPorUsuario.get(p.id) || {}
             const plan = planInfo(mem.plan_id || p.plan_id)
             let photo = p.foto_url || null
@@ -116,7 +141,7 @@ export default function useAdminClients() {
               fechaVencimiento: mem.fechaVencimiento || '',
             }
           }))
-          const profilesById = new Map((perfilesRes.data || []).map((profile) => [profile.id, profile]))
+          const profilesById = new Map(perfilesFiltrados.map((profile) => [profile.id, profile]))
           setAttendance((attendanceRes.data || []).map((item) => {
             const profile = profilesById.get(item.user_id)
             return {
@@ -133,16 +158,28 @@ export default function useAdminClients() {
               },
             }
           }))
+
+          if (requestId === requestRef.current && mounted.current) {
+            setClients(reales)
+            setSource('remote')
+            setLoading(false)
+          }
+          return
+        } else {
+          // Supabase configurado pero sin sesión válida: no mostrar datos semilla como reales
+          if (requestId === requestRef.current && mounted.current) {
+            setClients([])
+            setAttendance([])
+            setSource('initialized')
+            setLoading(false)
+          }
+          return
         }
       }
 
-      // 3) Lectura híbrida: combina 3 fuentes sin duplicar por email o CI.
-      //    - Clientes registrados localmente (localStorage)
-      //    - Usuarios reales de Supabase (profiles + memberships)
-      //    - Semilla de clientes de prueba (seedClients)
-      //    Los clientes de localStorage y Supabase se colocan al inicio.
+      // Modo local: Supabase no configurado
       const locales = getRegisteredClients().map(toClientShape)
-      const unificados = [...locales, ...reales, ...(hasRemoteSession ? [] : seedClients)]
+      const unificados = [...locales, ...seedClients]
       const vistos = new Set()
       const sinDuplicar = []
       for (const c of unificados) {
@@ -153,11 +190,19 @@ export default function useAdminClients() {
         vistos.add(clave)
         sinDuplicar.push(c)
       }
-      setClients(sinDuplicar)
-    } finally {
-      if (mounted.current) setLoading(false)
+      if (requestId === requestRef.current && mounted.current) {
+        setClients(sinDuplicar)
+        setAttendance(seedAttendance)
+        setSource('local')
+        setLoading(false)
+      }
+    } catch (err) {
+      if (requestId === requestRef.current && mounted.current) {
+        setError(err.message || 'Error al cargar clientes')
+        setLoading(false)
+      }
     }
-  }, [])
+  }, [authUserId, isAdmin])
 
   const registerAttendance = useCallback(async (client, estado = 'permitido', reason = '') => {
     const now = new Date()
@@ -299,10 +344,12 @@ export default function useAdminClients() {
       let durationDays = 30
       let price = 0
       let planId = planCode
+      let planName = client.planNombre
+
       if (isSupabaseConfigured && supabase && !String(client.id).startsWith('cli-')) {
         const { data: plan, error: planError } = await supabase
           .from('plans')
-          .select('id, precio, duracion_dias')
+          .select('id, nombre, precio, duracion_dias')
           .eq('codigo', planCode)
           .maybeSingle()
         if (planError) throw planError
@@ -310,6 +357,7 @@ export default function useAdminClients() {
         durationDays = Number(plan.duracion_dias)
         price = Number(plan.precio)
         planId = plan.id
+        planName = plan.nombre
       }
 
       const base = new Date()
@@ -320,7 +368,7 @@ export default function useAdminClients() {
       const updated = {
         ...client,
         plan: planCode,
-        planNombre: PLAN_NAMES[planCode] || client.planNombre,
+        planNombre: planName,
         fechaInicio: todayISO(),
         fechaVencimiento: base.toISOString().slice(0, 10),
       }
@@ -346,6 +394,8 @@ export default function useAdminClients() {
     clients,
     attendance,
     loading,
+    source,
+    error,
     refresh,
     registerAttendance,
     renewMembership,

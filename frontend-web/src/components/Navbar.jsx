@@ -11,13 +11,14 @@ export default function Navbar({
   hasActiveMembership = false,
   isReceptionUser = false,
   isAdminUser = false,
+  staffRole = null,
   onOpenReception,
   onOpenAdmin,
 }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const isStaff = isAdminUser || isReceptionUser
-  const staffLabel = isAdminUser ? 'Admin' : 'Recepción'
+  const isStaff = isAdminUser || isReceptionUser || staffRole === 'trainer'
+  const staffLabel = isAdminUser ? 'Admin' : isReceptionUser ? 'Recepción' : 'Entrenador'
   const displayName = isStaff ? staffLabel : user?.nombre || 'Cliente'
 
   useEffect(() => {
@@ -95,6 +96,16 @@ export default function Navbar({
             >
               <ClipboardCheck className="h-4 w-4" />
               Panel Recepción
+            </button>
+          )}
+          {staffRole === 'trainer' && (
+            <button
+              type="button"
+              onClick={onOpenReception}
+              className="btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-accent-hover"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Panel Entrenador
             </button>
           )}
           {user ? (
@@ -182,6 +193,19 @@ export default function Navbar({
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Panel Admin
+              </button>
+            )}
+            {staffRole === 'trainer' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  onOpenReception()
+                }}
+                className="btn-sheen inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Panel Entrenador
               </button>
             )}
             {isReceptionUser && (

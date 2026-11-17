@@ -160,7 +160,14 @@ export default function RegisterModal({ open, onClose, defaultPlan, onSuccess })
   )
 
   return (
-    <Modal open={open} onClose={handleClose} title="Registro de cliente" maxWidth="max-w-2xl">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Registro de cliente"
+      maxWidth="max-w-2xl"
+      closeOnBackdrop={false}
+      closeOnEscape={false}
+    >
       {success ? (
         <div className="flex flex-col items-center py-6 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-volt/15">

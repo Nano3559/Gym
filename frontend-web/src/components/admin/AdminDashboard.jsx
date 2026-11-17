@@ -121,6 +121,8 @@ function QuickAction({ icon: Icon, label, onClick, tone = 'accent' }) {
 
 export default function AdminDashboard({
   isAdmin = false,
+  authUser = null,
+  authLoading = false,
   clients = [],
   accessAlerts = [],
   incomeToday = 0,
@@ -130,28 +132,40 @@ export default function AdminDashboard({
   onOpenProducts,
   onToast,
   showReceptionActions = true,
+  financeSource,
 }) {
   const {
     today,
     sociosActivos,
     porVencer,
-    ingresosMes,
     reservasDelDia,
     ranking,
     clasesDelDia,
     refresh,
     fmtMoney,
     fmtInt,
-  } = useAdminDashboard({ includeMonthlyIncome: isAdmin })
+    sociosError,
+    clasesError,
+    demoMode,
+  } = useAdminDashboard({
+    authUser,
+    authLoading,
+  })
   const {
     currentIncome,
     previousIncome,
     currentExpenses,
+    currentNet,
     newMembers,
     churned,
-    available: financeAvailable,
+    loading: financeLoading,
+    financeAvailable,
+    peopleAvailable,
+    authRequired: financeAuthRequired,
+    error: financeError,
+    peopleError,
     refresh: refreshFinance,
-  } = useAdminFinance()
+  } = useAdminFinance(financeSource ? { financeSource } : {})
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
@@ -166,6 +180,11 @@ export default function AdminDashboard({
     return () => { mounted = false }
   }, [refresh, refreshFinance, isAdmin, onToast])
 
+  // Bandera para modo demo y errores (para cumplir reglas de hooks)
+  const showDemoMode = demoMode
+  const showSociosError = sociosError
+  const showClasesError = clasesError
+
   const maxBooked = ranking.length > 0 ? ranking[0].booked : 1
   const birthdayAlerts = clients
     .filter((client) => isBirthdayToday(client, today))
@@ -176,9 +195,43 @@ export default function AdminDashboard({
       detail: 'Socio cumple años hoy.',
     }))
   const alerts = [...birthdayAlerts, ...accessAlerts].slice(0, 8)
+  const financeReady = financeAvailable && !financeLoading
+  // peopleReady independiente de financeLoading (C-04):
+  // Los indicadores de personas deben depender de sus propias consultas,
+  // no ser bloqueados por la carga financiera.
+  const peopleReady = peopleAvailable
+
+  const retryFinance = () => {
+    setRefreshing(true)
+    refreshFinance().finally(() => setRefreshing(false))
+  }
 
   return (
     <div className="space-y-6">
+      {/* Mostrar modo de demostración */}
+      {showDemoMode && (
+        <div className="alert alert-warning mt-4">
+          <span className="fw-bold">Modo de demostración</span>
+          <span className="ms-2">Se muestran datos de ejemplo. No hay conexión real a la base de datos.</span>
+        </div>
+      )}
+
+      {/* Mostrar errores de socios */}
+      {showSociosError && (
+        <div className="alert alert-error mt-4">
+          <span className="fw-bold">Error al cargar socios</span>
+          <span className="ms-2">{sociosError}</span>
+        </div>
+      )}
+
+      {/* Mostrar errores de clases */}
+      {showClasesError && (
+        <div className="alert alert-error mt-4">
+          <span className="fw-bold">Error al cargar clases</span>
+          <span className="ms-2">{clasesError}</span>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold uppercase tracking-wide text-white">
@@ -202,6 +255,58 @@ export default function AdminDashboard({
           Actualizar
         </button>
       </div>
+
+      {isAdmin && !financeLoading && financeAuthRequired && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4"
+        >
+          <p className="text-sm text-amber-200">
+            Sesión no disponible: inicia sesión para ver los ingresos y egresos reales del mes.
+          </p>
+          <button
+            type="button"
+            onClick={retryFinance}
+            className="rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/15"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isAdmin && !financeLoading && financeError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"
+        >
+          <p className="text-sm text-red-200">{financeError}</p>
+          <button
+            type="button"
+            onClick={retryFinance}
+            className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/15"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isAdmin && !financeLoading && financeAvailable && !peopleAvailable && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4"
+        >
+          <p className="text-sm text-amber-200">
+            {peopleError || 'No se pudieron cargar las altas y bajas de socios. Los importes financieros sí están disponibles.'}
+          </p>
+          <button
+            type="button"
+            onClick={retryFinance}
+            className="rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/15"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {showReceptionActions && (
       <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
@@ -251,7 +356,7 @@ export default function AdminDashboard({
           <KpiCard
             icon={Banknote}
             label="Ingresos del Mes"
-            value={fmtMoney(financeAvailable ? currentIncome : ingresosMes)}
+            value={financeReady ? fmtMoney(currentIncome) : '—'}
             sub="Monto acumulado en Bs."
           />
         ) : showReceptionActions ? (
@@ -273,14 +378,14 @@ export default function AdminDashboard({
             <KpiCard
               icon={UserPlus}
               label="Nuevas Altas este Mes"
-              value={fmtInt(newMembers)}
+              value={peopleReady ? fmtInt(newMembers) : '—'}
               sub="Perfiles registrados en el mes"
               tone="volt"
             />
             <KpiCard
               icon={UserMinus}
               label="Bajas / No Renovaciones"
-              value={fmtInt(churned)}
+              value={peopleReady ? fmtInt(churned) : '—'}
               sub="Membresías vencidas sin renovación"
               tone="amber"
             />
@@ -296,7 +401,9 @@ export default function AdminDashboard({
               Tendencia de ingresos
             </h3>
             <p className="mt-1 text-xs text-muted">Comparación del mes actual con el anterior.</p>
-            {financeAvailable ? (
+            {financeLoading ? (
+              <p className="mt-4 text-sm text-muted">Cargando ingresos del mes actual y del anterior…</p>
+            ) : financeReady ? (
               <div className="mt-5 space-y-4">
                 {[
                   { label: 'Mes anterior', value: previousIncome },
@@ -322,7 +429,11 @@ export default function AdminDashboard({
                 ))}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-muted">Conecta Supabase para comparar los ingresos registrados por mes.</p>
+              <p className="mt-4 text-sm text-muted">
+                {financeAuthRequired
+                  ? 'Inicia sesión para comparar los ingresos registrados por mes.'
+                  : 'No hay datos financieros válidos para comparar los ingresos por mes.'}
+              </p>
             )}
           </div>
           <div className="rounded-2xl border border-line bg-surface p-6">
@@ -334,19 +445,30 @@ export default function AdminDashboard({
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-volt/25 bg-volt/5 p-4">
                 <p className="text-xs uppercase text-muted">Ingresos</p>
-                <p className="mt-1 font-display text-xl font-bold text-volt">{fmtMoney(currentIncome)}</p>
+                <p className="mt-1 font-display text-xl font-bold text-volt">
+                  {financeReady ? fmtMoney(currentIncome) : '—'}
+                </p>
               </div>
               <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-4">
                 <p className="text-xs uppercase text-muted">Egresos</p>
-                <p className="mt-1 font-display text-xl font-bold text-red-400">{fmtMoney(currentExpenses)}</p>
+                <p className="mt-1 font-display text-xl font-bold text-red-400">
+                  {financeReady ? fmtMoney(currentExpenses) : '—'}
+                </p>
               </div>
               <div className="col-span-2 rounded-xl border border-accent/25 bg-accent/5 p-4">
                 <p className="text-xs uppercase text-muted">Resultado neto</p>
                 <p className="mt-1 font-display text-2xl font-bold text-white">
-                  {fmtMoney(currentIncome - currentExpenses)}
+                  {financeReady ? fmtMoney(currentNet) : '—'}
                 </p>
               </div>
             </div>
+            {!financeLoading && !financeReady && (
+              <p className="mt-3 text-xs text-muted">
+                {financeAuthRequired
+                  ? 'Sin sesión no se muestran cifras financieras.'
+                  : 'Sin datos financieros válidos para el período actual.'}
+              </p>
+            )}
           </div>
         </section>
       )}

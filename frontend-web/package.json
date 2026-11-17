@@ -4,8 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:panel": "node scripts/admin-panel-sections.test.mjs",
     "test:balance": "node scripts/balance.test.mjs && node scripts/balance-service.test.mjs && node scripts/balance-render.test.mjs",
     "test:energy": "node scripts/energy.test.mjs && node scripts/energy-service.test.mjs",
+    "test:modal": "node scripts/modal-dismissal.test.mjs",
+    "test:reports": "node scripts/admin-reports-logic.test.mjs && node scripts/admin-reports-render.test.mjs",
+    "test:finance": "node scripts/admin-finance-logic.test.mjs && node scripts/admin-finance-render.test.mjs",
+    "test:dashboard": "node scripts/admin-dashboard-finance-logic.test.mjs && node scripts/admin-dashboard-finance-render.test.mjs",
     "test:tracking": "node scripts/tracking.test.mjs && node scripts/tracking-service.test.mjs && node scripts/tracking-render.test.mjs",
     "test:progress": "node scripts/progress.test.mjs && node scripts/progress-service.test.mjs",
     "dev": "vite",
